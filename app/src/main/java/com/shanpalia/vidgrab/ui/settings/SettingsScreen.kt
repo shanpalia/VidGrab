@@ -27,6 +27,9 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -37,6 +40,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +55,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.shanpalia.vidgrab.R
 import com.shanpalia.vidgrab.ui.components.InfoContentDialog
 import com.shanpalia.vidgrab.ui.theme.CyanPrimary
@@ -70,10 +75,17 @@ fun SettingsScreen(
     val maxDownloads by viewModel.maxDownloads.collectAsState()
     val usedStorage by viewModel.usedStorageBytes.collectAsState()
     val cacheBytes by viewModel.cacheBytes.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
 
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showTermsDialog by remember { mutableStateOf(false) }
     var showLicensesDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (!updateState.checking && updateState.latestVersionCode == null && updateState.error == null) {
+            viewModel.checkForUpdates()
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
@@ -93,6 +105,97 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
+            }
+
+            // APP UPDATE SECTION
+            item {
+                SettingsSectionHeader("APP UPDATE")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("App Update", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Current version ${updateState.currentVersionName}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        when {
+                            updateState.checking -> {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = CyanPrimary)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Checking for updates...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            updateState.downloading -> {
+                                LinearProgressIndicator(progress = { updateState.downloadProgress / 100f }, modifier = Modifier.fillMaxWidth(), color = CyanPrimary)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Downloading update... ${updateState.downloadProgress}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            updateState.downloadedApk != null -> {
+                                Text("Update downloaded", fontWeight = FontWeight.Bold, color = CyanPrimary)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = { viewModel.installDownloadedUpdate() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary), shape = RoundedCornerShape(10.dp)) {
+                                    Text("INSTALL UPDATE", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            updateState.available -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("New version ${updateState.latestVersionName} available", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("Latest version: ${updateState.latestVersionName ?: "—"}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (updateState.releaseNotes.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    updateState.releaseNotes.take(4).forEach { note ->
+                                        Text("• $note", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(onClick = { viewModel.downloadUpdate() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary), shape = RoundedCornerShape(10.dp)) {
+                                    Text(if (updateState.mandatory) "UPDATE NOW" else "UPDATE NOW", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            updateState.error != null -> {
+                                Text(updateState.error ?: "Couldn't check for updates.", fontSize = 12.sp, color = RoseError)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(onClick = { viewModel.checkForUpdates() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(17.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("TRY AGAIN")
+                                }
+                            }
+                            updateState.latestVersionCode != null -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("You're already using the latest version", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("Current: ${updateState.currentVersionName}   •   Latest: ${updateState.latestVersionName}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(10.dp))
+                                OutlinedButton(onClick = { viewModel.checkForUpdates() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(17.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("CHECK AGAIN")
+                                }
+                            }
+                            else -> {
+                                Text("Check the official VidGrab release page for updates.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = { viewModel.checkForUpdates() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary), shape = RoundedCornerShape(10.dp)) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(17.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("CHECK FOR UPDATES", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // APPEARANCE SECTION

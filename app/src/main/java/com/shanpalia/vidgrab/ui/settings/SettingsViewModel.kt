@@ -3,8 +3,11 @@ package com.shanpalia.vidgrab.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.shanpalia.vidgrab.BuildConfig
 import com.shanpalia.vidgrab.VidGrabApplication
 import com.shanpalia.vidgrab.data.repository.SettingsRepository
+import com.shanpalia.vidgrab.update.AppUpdateManager
+import com.shanpalia.vidgrab.update.AppUpdateState
 import com.shanpalia.vidgrab.utils.FileUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,71 +17,41 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-
     private val app = getApplication<VidGrabApplication>()
     private val settingsRepository = app.settingsRepository
+    private val updateManager = AppUpdateManager(app)
 
     val themeMode: StateFlow<String> = settingsRepository.observeThemeMode()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "light")
-
     val defaultAudioFormat: StateFlow<String> = settingsRepository.observeDefaultAudioFormat()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "M4A")
-
     val defaultAudioQuality: StateFlow<String> = settingsRepository.observeDefaultQuality()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "192 kbps")
-
     val notificationsEnabled: StateFlow<Boolean> = settingsRepository.observeNotificationsEnabled()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
     val maxDownloads: StateFlow<Int> = settingsRepository.observeMaxDownloads()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
 
     private val _usedStorageBytes = MutableStateFlow(0L)
     val usedStorageBytes: StateFlow<Long> = _usedStorageBytes.asStateFlow()
-
     private val _cacheBytes = MutableStateFlow(0L)
     val cacheBytes: StateFlow<Long> = _cacheBytes.asStateFlow()
 
-    init {
+    private val _updateState = MutableStateFlow(AppUpdateState())
+    val updateState: StateFlow<AppUpdateState> = _updateState.asStateFlow()
+
+    init { refreshStorageInfo() }
+
+    fun setThemeMode(mode: String) = viewModelScope.launch { settingsRepository.setThemeMode(mode) }
+    fun setDefaultAudioFormat(format: String) = viewModelScope.launch { settingsRepository.setDefaultAudioFormat(format) }
+    fun setDefaultAudioQuality(quality: String) = viewModelScope.launch { settingsRepository.setDefaultQuality(quality) }
+    fun setNotificationsEnabled(enabled: Boolean) = viewModelScope.launch { settingsRepository.setNotificationsEnabled(enabled) }
+    fun setMaxDownloads(count: Int) = viewModelScope.launch { settingsRepository.setMaxDownloads(count) }
+
+    fun clearCache() = viewModelScope.launch {
+        app.cacheDir.deleteRecursively()
+        app.cacheDir.mkdirs()
         refreshStorageInfo()
-    }
-
-    fun setThemeMode(mode: String) {
-        viewModelScope.launch {
-            settingsRepository.setThemeMode(mode)
-        }
-    }
-
-    fun setDefaultAudioFormat(format: String) {
-        viewModelScope.launch {
-            settingsRepository.setDefaultAudioFormat(format)
-        }
-    }
-
-    fun setDefaultAudioQuality(quality: String) {
-        viewModelScope.launch {
-            settingsRepository.setDefaultQuality(quality)
-        }
-    }
-
-    fun setNotificationsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setNotificationsEnabled(enabled)
-        }
-    }
-
-    fun setMaxDownloads(count: Int) {
-        viewModelScope.launch {
-            settingsRepository.setMaxDownloads(count)
-        }
-    }
-
-    fun clearCache() {
-        viewModelScope.launch {
-            app.cacheDir.deleteRecursively()
-            app.cacheDir.mkdirs()
-            refreshStorageInfo()
-        }
     }
 
     fun refreshStorageInfo() {
@@ -86,5 +59,31 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         var cSize = 0L
         app.cacheDir.listFiles()?.forEach { if (it.isFile) cSize += it.length() }
         _cacheBytes.value = cSize
+    }
+
+    fun checkForUpdates() = viewModelScope.launch {
+        _updateState.value = _updateState.value.copy(checking = true, error = null)
+        _updateState.value = updateManager.checkForUpdates()
+    }
+
+    fun downloadUpdate() = viewModelScope.launch {
+        val current = _updateState.value
+        if (!current.available || current.apkUrl.isNullOrBlank()) return@launch
+        _updateState.value = current.copy(downloading = true, downloadProgress = 0, error = null, downloadedApk = null)
+        val result = updateManager.downloadUpdate(current) { progress ->
+            _updateState.value = _updateState.value.copy(downloadProgress = progress)
+        }
+        result.onSuccess { file ->
+            _updateState.value = _updateState.value.copy(downloading = false, downloadProgress = 100, downloadedApk = file)
+        }.onFailure { error ->
+            _updateState.value = _updateState.value.copy(
+                downloading = false,
+                error = error.message ?: "Update download failed."
+            )
+        }
+    }
+
+    fun installDownloadedUpdate() {
+        _updateState.value.downloadedApk?.let { updateManager.installApk(it) }
     }
 }

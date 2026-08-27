@@ -1,0 +1,14 @@
+{
+  "appName": "VidGrab",
+  "packageName": "com.shanpalia.vidgrab",
+  "latestVersionCode": 1,
+  "latestVersionName": "1.0.0",
+  "minimumSupportedVersionCode": 1,
+  "releaseDate": "2026-08-27",
+  "releaseNotes": [
+    "Initial VidGrab release"
+  ],
+  "apkUrl": "https://shanpalia.github.io/WebsitePaliaAPK_V.2/VidGrab.apk",
+  "updateUrl": "https://shanpalia.github.io/WebsitePaliaAPK_V.2/",
+  "mandatory": false
+}

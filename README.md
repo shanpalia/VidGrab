@@ -53,3 +53,10 @@ VidGrab must only download content that the user is authorized to download and p
 - Launcher icon: VidGrab original V/play/download logo.
 - Splash screen: white background with VidGrab logo.
 - CodeMagic is build-only and is not used as app branding.
+
+## VidGrab App Updates
+
+Host a file named `vidgrab-update.json` on the GitHub Pages site at:
+`https://shanpalia.github.io/WebsitePaliaAPK_V.2/vidgrab-update.json`
+
+Use `vidgrab-update.json.example` in this project as the template. For each release, update `latestVersionCode`, `latestVersionName`, `releaseNotes`, and `apkUrl`, then upload the new release APK as `VidGrab.apk`. The app checks this manifest from Settings > App Update and only shows Update Now when the remote versionCode is newer.
