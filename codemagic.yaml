@@ -12,20 +12,13 @@ workflows:
         - ~/.gradle/wrapper
     scripts:
       - name: Ensure Gradle launcher is executable
-        script: |
-          chmod +x ./gradlew
-
+        script: chmod +x ./gradlew
       - name: Set Android SDK location
-        script: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
-
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
       - name: Build debug APK
-        script: |
-          ./gradlew assembleDebug --no-daemon
-
+        script: ./gradlew assembleDebug
     artifacts:
       - app/build/outputs/apk/debug/*.apk
-
 
   vidgrab-release:
     name: VidGrab Android Release APK and AAB
@@ -33,6 +26,9 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "com.shanpalia.vidgrab"
+      # Add your Codemagic keystore reference here when you want a signed release.
+      # android_signing:
+      #   - vidgrab_keystore
       java: 17
     cache:
       cache_paths:
@@ -40,17 +36,12 @@ workflows:
         - ~/.gradle/wrapper
     scripts:
       - name: Ensure Gradle launcher is executable
-        script: |
-          chmod +x ./gradlew
-
+        script: chmod +x ./gradlew
       - name: Set Android SDK location
-        script: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
-
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
       - name: Build release APK and AAB
         script: |
-          ./gradlew assembleRelease bundleRelease --no-daemon
-
+          ./gradlew assembleRelease bundleRelease
     artifacts:
       - app/build/outputs/apk/release/*.apk
       - app/build/outputs/bundle/release/*.aab
