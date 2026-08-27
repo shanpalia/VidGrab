@@ -1,0 +1,7 @@
+{
+  "name": "VidGrab",
+  "description": "Universal media grabber and downloader by ShanPalia. Grab. Save. Enjoy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
