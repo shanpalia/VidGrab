@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -35,7 +36,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +70,75 @@ fun MediaResultBottomSheet(
     modifier: Modifier = Modifier
 ) {
     if (result == null) return
+
+    var showVideoChoices by remember { mutableStateOf(false) }
+    var showAudioChoices by remember { mutableStateOf(false) }
+
+    if (showVideoChoices) {
+        AlertDialog(
+            onDismissRequest = { showVideoChoices = false },
+            title = { Text("Download Video", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Choose video quality", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    result.videoOptions.forEach { option ->
+                        OutlinedButton(
+                            onClick = {
+                                showVideoChoices = false
+                                onDownloadOption(option)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                                Text(option.resolution ?: option.quality ?: option.format, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (option.estimatedSizeBytes > 0) FileUtils.formatFileSize(option.estimatedSizeBytes) else "Size unavailable",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(Icons.Default.Download, contentDescription = null)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showVideoChoices = false }) { Text("CANCEL") } }
+        )
+    }
+
+    if (showAudioChoices) {
+        AlertDialog(
+            onDismissRequest = { showAudioChoices = false },
+            title = { Text("Download Audio", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Choose audio quality", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    result.audioOptions.forEach { option ->
+                        OutlinedButton(
+                            onClick = {
+                                showAudioChoices = false
+                                onDownloadOption(option)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                                Text(option.quality ?: option.format, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (option.estimatedSizeBytes > 0) FileUtils.formatFileSize(option.estimatedSizeBytes) else option.format,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(Icons.Default.Download, contentDescription = null)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showAudioChoices = false }) { Text("CANCEL") } }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -208,10 +283,7 @@ fun MediaResultBottomSheet(
                     ) {
                         if (result.videoOptions.isNotEmpty()) {
                             Button(
-                                onClick = {
-                                    val best = result.videoOptions.first()
-                                    onDownloadOption(best)
-                                },
+                                onClick = { showVideoChoices = true },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(44.dp)
@@ -230,7 +302,7 @@ fun MediaResultBottomSheet(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Download Video",
+                                    text = "VIDEO",
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp
@@ -240,10 +312,7 @@ fun MediaResultBottomSheet(
 
                         if (result.audioOptions.isNotEmpty()) {
                             FilledTonalButton(
-                                onClick = {
-                                    val bestAudio = result.audioOptions.first()
-                                    onDownloadOption(bestAudio)
-                                },
+                                onClick = { showAudioChoices = true },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(44.dp)
@@ -262,7 +331,7 @@ fun MediaResultBottomSheet(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Download Audio",
+                                    text = "AUDIO",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp
                                 )

@@ -1,62 +1,30 @@
-# VidGrab
+# VidGrab — CodeMagic Ready
 
-**VidGrab — Grab. Save. Enjoy.**
+VidGrab — Grab. Save. Enjoy. — By ShanPalia.
 
-By ShanPalia
+## Build
+- Gradle wrapper: 9.3.1
+- Java: 17
+- Package: `com.shanpalia.vidgrab`
+- CodeMagic workflows: `vidgrab-debug`, `vidgrab-release`
 
-VidGrab is a native Android media utility with a responsive light theme, browser shortcuts, URL analysis flow, download manager, audio extraction, media player and history.
-
-## Build locally
-
-Requirements:
-- Android Studio
-- JDK 17
-- Android SDK 36
-
-Open the repository root in Android Studio and sync Gradle.
-
-Debug APK:
-
-```bash
-./gradlew assembleDebug
-```
-
-Release APK:
-
-```bash
-./gradlew assembleRelease
-```
-
-Release AAB:
-
-```bash
-./gradlew bundleRelease
-```
-
-Outputs are under `app/build/outputs/`.
-
-## CodeMagic
-
-A `codemagic.yaml` is included. The debug workflow builds an installable debug APK. The release workflow builds APK and AAB; for Play Store distribution, configure an Android keystore in CodeMagic and connect it to the release workflow.
-
-The project is configured to use JDK 17 and Gradle 9.3.1, which matches Android Gradle Plugin 9.1.x compatibility.
-
-## URL paste
-
-The Home screen uses Android's system ClipboardManager. The Paste button, long-press paste, clipboard detection and Paste & Analyze flow update the actual URL field state.
-
-## Download policy
-
-VidGrab must only download content that the user is authorized to download and publicly/technically available through an allowed mechanism. It does not bypass DRM, private-account restrictions, authentication, paywalls or other technical protections.
-
-## Branding
-- Launcher icon: VidGrab original V/play/download logo.
-- Splash screen: white background with VidGrab logo.
-- CodeMagic is build-only and is not used as app branding.
-
-## VidGrab App Updates
-
-Host a file named `vidgrab-update.json` on the GitHub Pages site at:
+## App update manifest
+Publish `vidgrab-update.json` at:
 `https://shanpalia.github.io/WebsitePaliaAPK_V.2/vidgrab-update.json`
 
-Use `vidgrab-update.json.example` in this project as the template. For each release, update `latestVersionCode`, `latestVersionName`, `releaseNotes`, and `apkUrl`, then upload the new release APK as `VidGrab.apk`. The app checks this manifest from Settings > App Update and only shows Update Now when the remote versionCode is newer.
+The app checks the GitHub Pages URL first, then the GitHub raw `main`/`master` URLs as fallbacks. Keep the JSON package name exactly `com.shanpalia.vidgrab`.
+
+For each release, update:
+- `latestVersionCode`
+- `latestVersionName`
+- `releaseNotes`
+- `apkUrl`
+- optionally `sha256`
+
+The current project manifest is included at the repository root as `vidgrab-update.json` and is set to version 1.0.4 / versionCode 4. Copy that file to the website repository when publishing the first manifest.
+
+## Download UI
+The Media Found screen now opens a quality chooser when the user taps VIDEO or AUDIO. It no longer immediately selects the first/best format, and the quick-action labels are compact for narrow phones. Individual quality cards still have Save buttons.
+
+## Important
+A release APK must be signed with the same signing key as the installed VidGrab app to install as an update. CodeMagic signing must be configured for release builds.

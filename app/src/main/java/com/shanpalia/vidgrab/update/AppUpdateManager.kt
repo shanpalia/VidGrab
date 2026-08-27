@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit
 
 private const val UPDATE_MANIFEST_URL = "https://shanpalia.github.io/WebsitePaliaAPK_V.2/vidgrab-update.json"
 private const val PACKAGE_NAME = "com.shanpalia.vidgrab"
+private const val GITHUB_RAW_MANIFEST_URL = "https://raw.githubusercontent.com/shanpalia/WebsitePaliaAPK_V.2/main/vidgrab-update.json"
+private const val GITHUB_RAW_MASTER_MANIFEST_URL = "https://raw.githubusercontent.com/shanpalia/WebsitePaliaAPK_V.2/master/vidgrab-update.json"
 
 private data class UpdateManifest(
     val appName: String,
@@ -49,7 +51,8 @@ data class AppUpdateState(
     val downloading: Boolean = false,
     val downloadProgress: Int = 0,
     val downloadedApk: File? = null,
-    val verificationFailed: Boolean = false
+    val verificationFailed: Boolean = false,
+    val sha256: String? = null
 )
 
 class AppUpdateManager(private val context: Context) {
@@ -59,34 +62,47 @@ class AppUpdateManager(private val context: Context) {
         .build()
 
     suspend fun checkForUpdates(): AppUpdateState = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(UPDATE_MANIFEST_URL)
-                .header("Accept", "application/json")
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                val body = response.body?.string().orEmpty()
-                val manifest = parseManifest(JSONObject(body))
-                if (manifest.packageName != PACKAGE_NAME) {
-                    return@withContext AppUpdateState(error = "This update is not for VidGrab.")
+        val urls = listOf(UPDATE_MANIFEST_URL, GITHUB_RAW_MANIFEST_URL, GITHUB_RAW_MASTER_MANIFEST_URL)
+        var lastError: Throwable? = null
+        for (url in urls) {
+            try {
+                val request = Request.Builder()
+                    .url("$url?ts=${System.currentTimeMillis()}")
+                    .header("Accept", "application/json")
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        lastError = IOException("HTTP ${response.code}")
+                        return@use
+                    }
+                    val body = response.body?.string().orEmpty()
+                    if (body.isBlank()) {
+                        lastError = IOException("Empty update manifest")
+                        return@use
+                    }
+                    val manifest = parseManifest(JSONObject(body))
+                    if (manifest.packageName != PACKAGE_NAME) {
+                        return@withContext AppUpdateState(error = "This update is not for VidGrab.")
+                    }
+                    val available = manifest.latestVersionCode > BuildConfig.VERSION_CODE
+                    val mandatory = available && (manifest.mandatory || BuildConfig.VERSION_CODE < manifest.minimumSupportedVersionCode)
+                    return@withContext AppUpdateState(
+                        latestVersionName = manifest.latestVersionName,
+                        latestVersionCode = manifest.latestVersionCode,
+                        releaseNotes = manifest.releaseNotes,
+                        apkUrl = manifest.apkUrl,
+                        updateUrl = manifest.updateUrl,
+                        mandatory = mandatory,
+                        available = available,
+                        error = null,
+                        sha256 = manifest.sha256
+                    )
                 }
-                val available = manifest.latestVersionCode > BuildConfig.VERSION_CODE
-                val mandatory = available && (manifest.mandatory || BuildConfig.VERSION_CODE < manifest.minimumSupportedVersionCode)
-                AppUpdateState(
-                    latestVersionName = manifest.latestVersionName,
-                    latestVersionCode = manifest.latestVersionCode,
-                    releaseNotes = manifest.releaseNotes,
-                    apkUrl = manifest.apkUrl,
-                    updateUrl = manifest.updateUrl,
-                    mandatory = mandatory,
-                    available = available,
-                    error = null
-                )
+            } catch (t: Throwable) {
+                lastError = t
             }
-        } catch (t: Throwable) {
-            AppUpdateState(error = "Couldn't check for updates. Please try again.")
         }
+        AppUpdateState(error = "Update information is unavailable. Please make sure vidgrab-update.json is published on the VidGrab website.")
     }
 
     suspend fun downloadUpdate(state: AppUpdateState, onProgress: (Int) -> Unit): Result<File> = withContext(Dispatchers.IO) {
@@ -128,11 +144,7 @@ class AppUpdateManager(private val context: Context) {
         }
     }
 
-    private fun stateHashFromManifest(state: AppUpdateState): String? {
-        // Hash is optional in the static manifest. The Android package installer still enforces
-        // normal package/signature compatibility when the user confirms installation.
-        return null
-    }
+    private fun stateHashFromManifest(state: AppUpdateState): String? = state.sha256
 
     fun installApk(file: File): Result<Unit> {
         return try {
