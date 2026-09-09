@@ -1,30 +1,27 @@
-# VidGrab — CodeMagic Ready
+# VidGrab
 
-VidGrab — Grab. Save. Enjoy. — By ShanPalia.
+VidGrab is a mobile-first media browser/downloader UI branded as **VidGrab** with **© Shan Palia**.
 
-## Build
-- Gradle wrapper: 9.3.1
-- Java: 17
-- Package: `com.shanpalia.vidgrab`
-- CodeMagic workflows: `vidgrab-debug`, `vidgrab-release`
+## Android storage
 
-## App update manifest
-Publish `vidgrab-update.json` at:
-`https://shanpalia.github.io/WebsitePaliaAPK_V.2/vidgrab-update.json`
+The Codemagic Android workflow generates a Capacitor Android shell and injects a native Android storage bridge.
+On Android 10+, downloaded files are written through MediaStore into the public Downloads directory:
 
-The app checks the GitHub Pages URL first, then the GitHub raw `main`/`master` URLs as fallbacks. Keep the JSON package name exactly `com.shanpalia.vidgrab`.
+- `Download/VidGrab/Audio/`
+- `Download/VidGrab/Video/`
+- `Download/VidGrab/Image/`
+- `Download/VidGrab/Others/`
 
-For each release, update:
-- `latestVersionCode`
-- `latestVersionName`
-- `releaseNotes`
-- `apkUrl`
-- optionally `sha256`
+The app also keeps a persistent IndexedDB copy for in-app playback. This means the VidGrab video/audio player can play the real downloaded bytes without going back to YouTube or another source URL.
 
-The current project manifest is included at the repository root as `vidgrab-update.json` and is set to version 1.0.4 / versionCode 4. Copy that file to the website repository when publishing the first manifest.
+On Android versions where public storage rules differ, the native bridge uses the appropriate legacy path behavior.
 
-## Download UI
-The Media Found screen now opens a quality chooser when the user taps VIDEO or AUDIO. It no longer immediately selects the first/best format, and the quick-action labels are compact for narrow phones. Individual quality cards still have Save buttons.
+## Build with Codemagic
 
-## Important
-A release APK must be signed with the same signing key as the installed VidGrab app to install as an update. CodeMagic signing must be configured for release builds.
+The included `codemagic.yaml` installs dependencies, builds the Vite app, generates the Capacitor Android project, applies the VidGrab native storage bridge and builds a debug APK.
+
+For a release APK/AAB, configure Android signing in Codemagic and change the Gradle task in the workflow to the desired release task.
+
+## Browser fallback
+
+When running as a normal website, VidGrab continues to use persistent browser storage (IndexedDB) and the browser's download mechanism. A normal web page cannot silently create arbitrary folders in phone storage; the real `Download/VidGrab/...` folder behavior is provided by the Android native build.

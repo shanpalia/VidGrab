@@ -1,0 +1,12 @@
+{
+  "name": "VidGrab - Media Browser & Downloader",
+  "short_name": "VidGrab",
+  "description": "VidGrab media browser and downloader. © Shan Palia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "icons": [
+    {"src": "/vidgrab-icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
