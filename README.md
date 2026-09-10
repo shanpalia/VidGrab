@@ -22,9 +22,9 @@ The included `codemagic.yaml` installs dependencies, builds the Vite app, genera
 
 ### Codemagic signing
 1. In Codemagic, upload your Android release keystore under **Team settings → codemagic.yaml settings → Code signing identities → Android keystores**.
-2. Set the keystore reference name to exactly **`vidgrab_release_keystore`** (or change the same name in `codemagic.yaml`).
+2. The workflow is already configured to use your available Codemagic Android keystore reference **`paliaapk-release`**.
 3. Start the `vidgrab-android` workflow. The final artifact is `VidGrab.apk` (APK only; no AAB is generated). Codemagic supplies `CM_KEYSTORE_PATH`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, and `CM_KEY_PASSWORD` to Gradle for the release build.
-4. The build artifacts are `app-release.apk` and `app-release.aab`.
+4. The only published artifact is `VidGrab.apk`. No AAB is generated.
 
 Keep the same keystore for future updates so Android/Google Play accepts them as updates to the same app.
 

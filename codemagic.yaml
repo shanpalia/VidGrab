@@ -7,9 +7,9 @@ workflows:
       java: 17
       # Upload an Android keystore in Codemagic > Team settings >
       # codemagic.yaml settings > Code signing identities > Android keystores
-      # and use this exact reference name: vidgrab_release_keystore
+      # and use this exact reference name: paliaapk-release
       android_signing:
-        - vidgrab_release_keystore
+        - paliaapk-release
     scripts:
       - name: Install dependencies
         script: npm install
