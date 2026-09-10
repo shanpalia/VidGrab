@@ -156,7 +156,8 @@ class VidGrabNative {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(uri, mimeType == null ? "*/*" : mimeType);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            activity.startActivity(intent);
+            Intent chooser = Intent.createChooser(intent, "Play with Vibe Player or another player");
+            activity.startActivity(chooser);
             return true;
         } catch (Exception e) { return false; }
     }
@@ -176,6 +177,20 @@ class VidGrabNative {
 }
 `;
 fs.writeFileSync(path.join(javaDir, 'MainActivity.java'), activity);
+
+// Configure release signing for Codemagic. Codemagic injects CM_KEYSTORE_* variables
+// when the keystore reference is configured in codemagic.yaml.
+const gradleFile = path.join(android, 'app', 'build.gradle');
+if (fs.existsSync(gradleFile)) {
+  let gradle = fs.readFileSync(gradleFile, 'utf8');
+  if (!gradle.includes('signingConfigs {') && gradle.includes('android {')) {
+    gradle = gradle.replace(/android\s*\{/, `android {\n    signingConfigs {\n        release {\n            if (System.getenv('CI')) {\n                storeFile file(System.getenv('CM_KEYSTORE_PATH'))\n                storePassword System.getenv('CM_KEYSTORE_PASSWORD')\n                keyAlias System.getenv('CM_KEY_ALIAS')\n                keyPassword System.getenv('CM_KEY_PASSWORD')\n            }\n        }\n    }`, 1);
+  }
+  if (gradle.includes('buildTypes {') && !gradle.includes('signingConfig signingConfigs.release')) {
+    gradle = gradle.replace(/buildTypes\s*\{\s*release\s*\{/, `buildTypes {\n        release {\n            signingConfig signingConfigs.release`, 1);
+  }
+  fs.writeFileSync(gradleFile, gradle);
+}
 
 // Remove any generated Kotlin MainActivity so there is only one Activity class.
 const generatedKotlin = path.join(android, 'app', 'src', 'main', 'java', 'com', 'shanpalia', 'vidgrab', 'MainActivity.kt');

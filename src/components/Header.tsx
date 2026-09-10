@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onNavigate, filesCoun
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium leading-none">
-              Developed by <span className="text-gray-700 font-semibold">Shan Palia</span>
+              By <span className="text-gray-700 font-semibold">PaliaAPK HUB</span>
             </p>
           </div>
         </button>

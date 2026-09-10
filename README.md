@@ -18,10 +18,22 @@ On Android versions where public storage rules differ, the native bridge uses th
 
 ## Build with Codemagic
 
-The included `codemagic.yaml` installs dependencies, builds the Vite app, generates the Capacitor Android project, applies the VidGrab native storage bridge and builds a debug APK.
+The included `codemagic.yaml` installs dependencies, builds the Vite app, generates the Capacitor Android project, applies the VidGrab native storage bridge and builds a **signed release APK named **VidGrab.apk****.
 
-For a release APK/AAB, configure Android signing in Codemagic and change the Gradle task in the workflow to the desired release task.
+### Codemagic signing
+1. In Codemagic, upload your Android release keystore under **Team settings → codemagic.yaml settings → Code signing identities → Android keystores**.
+2. Set the keystore reference name to exactly **`vidgrab_release_keystore`** (or change the same name in `codemagic.yaml`).
+3. Start the `vidgrab-android` workflow. The final artifact is `VidGrab.apk` (APK only; no AAB is generated). Codemagic supplies `CM_KEYSTORE_PATH`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, and `CM_KEY_PASSWORD` to Gradle for the release build.
+4. The build artifacts are `app-release.apk` and `app-release.aab`.
+
+Keep the same keystore for future updates so Android/Google Play accepts them as updates to the same app.
 
 ## Browser fallback
 
 When running as a normal website, VidGrab continues to use persistent browser storage (IndexedDB) and the browser's download mechanism. A normal web page cannot silently create arbitrary folders in phone storage; the real `Download/VidGrab/...` folder behavior is provided by the Android native build.
+
+
+## Download size / Vibe Player / Store fallback
+- My Files records the actual downloaded byte size (`Blob.size`), not the backend estimate, so successful downloads do not appear as 0 KB.
+- Android external playback uses the system player chooser titled `Play with Vibe Player or another player`; if Vibe Player is installed it can be selected.
+- Set `VITE_PALIAAPK_HUB_STORE_URL` to the exact PaliaAPK HUB Store URL. It is intentionally not hard-coded because the exact store URL was not provided in this project.

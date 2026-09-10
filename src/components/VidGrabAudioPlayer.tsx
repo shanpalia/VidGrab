@@ -22,6 +22,8 @@ import { DownloadedFile } from '../types';
 import { StorageService } from '../services/storage';
 import { MediaStorage } from '../services/mediaStorage';
 import { RenameModal } from './RenameModal';
+import { NativeStorage } from '../services/nativeStorage';
+import { openPaliaApkHubStore } from '../services/storeConfig';
 
 interface VidGrabAudioPlayerProps {
   file: DownloadedFile;
@@ -246,6 +248,22 @@ export const VidGrabAudioPlayer: React.FC<VidGrabAudioPlayerProps> = ({
         <div className="mx-4 mb-2 bg-red-950/90 border border-red-800 rounded-2xl p-3 text-center">
           <p className="text-sm font-bold text-white">Unable to play audio</p>
           <p className="text-xs text-red-200 mt-1">{mediaLoadError}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {currentFile.nativeFileUri && (
+                <button
+                  onClick={() => NativeStorage.open(currentFile.nativeFileUri, currentFile.type === 'video' ? 'video/*' : 'audio/*')}
+                  className="px-3 py-2 rounded-lg bg-white text-gray-900 text-xs font-black"
+                >
+                  Play with Vibe Player
+                </button>
+              )}
+              <button
+                onClick={() => { if (!openPaliaApkHubStore()) alert('Set VITE_PALIAAPK_HUB_STORE_URL to your PaliaAPK HUB Store URL.'); }}
+                className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-black"
+              >
+                PaliaAPK HUB Store
+              </button>
+            </div>
         </div>
       )}
 

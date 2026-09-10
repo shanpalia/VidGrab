@@ -369,7 +369,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             VID<span className="text-red-600">GRAB</span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
-            Developed by <span className="font-bold text-gray-800">Shan Palia</span> • © Shan Palia
+            By <span className="font-bold text-gray-800">PaliaAPK HUB</span> • Developer by Shan Palia
           </p>
         </div>
       </div>

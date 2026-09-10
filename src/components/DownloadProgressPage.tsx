@@ -32,6 +32,7 @@ import { VidGrabVideoPlayer } from './VidGrabVideoPlayer';
 import { VidGrabAudioPlayer } from './VidGrabAudioPlayer';
 import { VidGrabImageViewer } from './VidGrabImageViewer';
 import { NativeStorage } from '../services/nativeStorage';
+import { openPaliaApkHubStore } from '../services/storeConfig';
 
 interface DownloadProgressPageProps {
   metadata: MediaMetadata;
@@ -158,7 +159,15 @@ export const DownloadProgressPage: React.FC<DownloadProgressPageProps> = ({
         document.body.removeChild(anchor);
       }
 
-      // 4. Save metadata to My Files
+      // 4. Save metadata to My Files. Always use the REAL saved blob size;
+      // backend format estimates may be 0/unknown and must never make My Files
+      // display 0 KB after a successful download.
+      const actualSizeBytes = blob.size;
+      const actualSize = ApiService.formatBytes(actualSizeBytes);
+      setDownloadedBytes(actualSizeBytes);
+      setTotalBytes(actualSizeBytes);
+      setPercent(100);
+
       const newFile: DownloadedFile = {
         id: fileId,
         mediaId: metadata.id,
@@ -170,8 +179,8 @@ export const DownloadProgressPage: React.FC<DownloadProgressPageProps> = ({
         formatLabel: selectedFormat.label,
         ext: selectedFormat.ext,
         type: selectedFormat.category,
-        size: selectedFormat.size,
-        sizeBytes: selectedFormat.sizeBytes,
+        size: actualSize,
+        sizeBytes: actualSizeBytes,
         downloadedAt: new Date().toISOString(),
         thumbnail: metadata.thumbnail,
         mediaBlobUrl: createdBlobUrl,
@@ -193,7 +202,7 @@ export const DownloadProgressPage: React.FC<DownloadProgressPageProps> = ({
         type: selectedFormat.category,
         timestamp: new Date().toISOString(),
         thumbnail: metadata.thumbnail,
-        fileSize: selectedFormat.size,
+        fileSize: actualSize,
         status: 'completed',
       });
 
@@ -504,7 +513,7 @@ export const DownloadProgressPage: React.FC<DownloadProgressPageProps> = ({
                     </p>
                     <p>
                       <span className="text-emerald-700 font-bold">Size:</span>{' '}
-                      <span className="font-bold text-gray-900">{selectedFormat.size}</span>
+                      <span className="font-bold text-gray-900">{completedFile?.size || selectedFormat.size}</span>
                     </p>
                   </div>
                 </div>
@@ -598,6 +607,15 @@ export const DownloadProgressPage: React.FC<DownloadProgressPageProps> = ({
                 >
                   <RotateCcw className="w-4 h-4" />
                   <span>TRY AGAIN</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!openPaliaApkHubStore()) alert('Set VITE_PALIAAPK_HUB_STORE_URL to your PaliaAPK HUB Store URL.');
+                  }}
+                  className="px-5 py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-black cursor-pointer"
+                >
+                  PaliaAPK HUB Store
                 </button>
 
                 <button

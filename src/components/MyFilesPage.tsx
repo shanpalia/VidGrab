@@ -24,6 +24,7 @@ import { StorageService } from '../services/storage';
 import { MediaStorage } from '../services/mediaStorage';
 import { NativeStorage } from '../services/nativeStorage';
 import { RenameModal } from './RenameModal';
+import { openPaliaApkHubStore } from '../services/storeConfig';
 
 interface MyFilesPageProps {
   files: DownloadedFile[];
@@ -99,6 +100,20 @@ export const MyFilesPage: React.FC<MyFilesPageProps> = ({
     } else {
       window.open(file.originalUrl, '_blank');
     }
+  };
+
+  const handleVibePlayer = (file: DownloadedFile) => {
+    setActiveMenuFileId(null);
+    const mime = file.type === 'video' ? `video/${file.ext === 'webm' ? 'webm' : 'mp4'}` : file.type === 'audio' ? (file.ext === 'mp3' ? 'audio/mpeg' : 'audio/mp4') : file.type === 'image' ? `image/${file.ext === 'jpg' ? 'jpeg' : file.ext}` : '*/*';
+    if (file.nativeFileUri && NativeStorage.open(file.nativeFileUri, mime)) {
+      showToast('Choose Vibe Player from the Android player list.');
+      return;
+    }
+    if (openPaliaApkHubStore()) {
+      showToast('Opening PaliaAPK HUB Store.');
+      return;
+    }
+    showToast('Install Vibe Player or set the PaliaAPK HUB Store URL.');
   };
 
   const handleRenameConfirm = (newTitle: string) => {
@@ -414,6 +429,14 @@ export const MyFilesPage: React.FC<MyFilesPageProps> = ({
                       >
                         <Play className="w-3.5 h-3.5 text-red-600" />
                         <span>Play Media</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleVibePlayer(file)}
+                        className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-50 text-left transition-colors cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Play with Vibe Player</span>
                       </button>
 
                       <button

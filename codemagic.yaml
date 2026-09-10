@@ -1,16 +1,24 @@
 workflows:
   vidgrab-android:
-    name: VidGrab Android
+    name: VidGrab Android Signed Release
     max_build_duration: 60
     environment:
       node: latest
       java: 17
+      # Upload an Android keystore in Codemagic > Team settings >
+      # codemagic.yaml settings > Code signing identities > Android keystores
+      # and use this exact reference name: vidgrab_release_keystore
+      android_signing:
+        - vidgrab_release_keystore
     scripts:
       - name: Install dependencies
         script: npm install
       - name: Build web app and generate Android project
         script: npm run android:prepare
-      - name: Build Android APK
-        script: cd android && ./gradlew assembleDebug
+      - name: Build signed release APK
+        script: |
+          cd android
+          ./gradlew assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/VidGrab.apk
     artifacts:
-      - android/app/build/outputs/apk/debug/app-debug.apk
+      - android/app/build/outputs/apk/release/VidGrab.apk

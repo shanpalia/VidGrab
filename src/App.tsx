@@ -21,8 +21,10 @@ import { ApiService } from './services/api';
 import { StorageService } from './services/storage';
 import { NativeStorage } from './services/nativeStorage';
 import { MediaStorage } from './services/mediaStorage';
+import { SplashScreen } from './components/SplashScreen';
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveNavTab>('home');
   const [browserUrl, setBrowserUrl] = useState<string>('https://www.youtube.com/watch?v=colors-of-wildlife-4k');
   const [currentMetadata, setCurrentMetadata] = useState<MediaMetadata | null>(null);
@@ -117,6 +119,10 @@ export default function App() {
     setActiveTab('result');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (showSplash) {
+    return <SplashScreen onFinished={() => setShowSplash(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 flex flex-col font-sans selection:bg-red-500 selection:text-white">
