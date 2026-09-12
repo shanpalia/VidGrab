@@ -14,18 +14,8 @@ function replaceRegex(file, pattern, replace, label) {
   }
 }
 
-// The production build must never render demo videos when a real search fails.
-replaceRegex(
-  'src/components/InAppBrowser.tsx',
-  /setYtSearchResults\(results\.length > 0 \? results : INITIAL_YT_VIDEOS\);/g,
-  'setYtSearchResults(results);',
-  'real YouTube search results'
-);
-replaceRegex(
-  'src/components/InAppBrowser.tsx',
-  /setYtSearchResults\(INITIAL_YT_VIDEOS\);/g,
-  'setYtSearchResults([]);',
-  'empty YouTube search on failure'
-);
+// Never show hard-coded/demo results when a real YouTube search is requested.
+replaceRegex('src/components/InAppBrowser.tsx', /setYtSearchResults\(results\.length > 0 \? results : INITIAL_YT_VIDEOS\);/g, 'setYtSearchResults(results);', 'real YouTube search results');
+replaceRegex('src/components/InAppBrowser.tsx', /setYtSearchResults\(INITIAL_YT_VIDEOS\);/g, 'setYtSearchResults([]);', 'empty YouTube search on failure');
 
 console.log('[prepare-source] source preparation complete');
