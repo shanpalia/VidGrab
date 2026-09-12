@@ -5,9 +5,6 @@ workflows:
     environment:
       node: latest
       java: 21
-      # Upload an Android keystore in Codemagic > Team settings >
-      # codemagic.yaml settings > Code signing identities > Android keystores
-      # and use this exact reference name: paliaapk-release
       android_signing:
         - paliaapk-release
     scripts:
@@ -19,6 +16,7 @@ workflows:
         script: |
           cd android
           ./gradlew assembleRelease
+          test -f app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/VidGrab.apk
     artifacts:
       - android/app/build/outputs/apk/release/VidGrab.apk
