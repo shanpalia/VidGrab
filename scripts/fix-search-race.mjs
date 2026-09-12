@@ -22,7 +22,11 @@ if (!api.includes('VIDGRAB_SEARCH_RACE_V1')) {
       }
     })();
 
-    const publicSearch = this.getYouTubeSearchFromPublicApi(q).catch(() => []);
+    const publicSearch = Promise.race([
+      this.getYouTubeSearchFromPublicApi(q).catch(() => []),
+      new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 12000)),
+    ]);
+
     const candidates = await Promise.all([backendSearch, publicSearch]);
     for (const results of candidates) {
       if (Array.isArray(results) && results.length) return results;
