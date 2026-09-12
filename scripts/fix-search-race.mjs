@@ -16,22 +16,27 @@ if (!api.includes('VIDGRAB_SEARCH_RACE_V1')) {
       try {
         const res = await fetch('/api/youtube/search?q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(6500) });
         const data = await res.json();
-        return Array.isArray(data.results) ? data.results : [];
+        const results = Array.isArray(data.results) ? data.results : [];
+        if (results.length) return results;
+        throw new Error('EMPTY_BACKEND_RESULTS');
       } catch {
-        return [];
+        throw new Error('BACKEND_SEARCH_FAILED');
       }
     })();
 
     const publicSearch = Promise.race([
-      this.getYouTubeSearchFromPublicApi(q).catch(() => []),
-      new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 12000)),
+      this.getYouTubeSearchFromPublicApi(q).then((results) => {
+        if (Array.isArray(results) && results.length) return results;
+        throw new Error('EMPTY_PUBLIC_RESULTS');
+      }),
+      new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('PUBLIC_SEARCH_TIMEOUT')), 12000)),
     ]);
 
-    const candidates = await Promise.all([backendSearch, publicSearch]);
-    for (const results of candidates) {
-      if (Array.isArray(results) && results.length) return results;
+    try {
+      return await Promise.any([backendSearch, publicSearch]);
+    } catch {
+      return [];
     }
-    return [];
   }
 `;
     api = api.slice(0, start) + replacement + api.slice(end);
