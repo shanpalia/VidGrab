@@ -21,7 +21,6 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
 
@@ -43,10 +42,6 @@ public class MainActivity extends BridgeActivity {
 
 class VidGrabNative {
     private final MainActivity activity;
-
-    // Vibe Player - Music Player currently published on Google Play.
-    // Keeping this package in one place makes the integration easy to update
-    // if the app publisher changes its Android application id.
     private static final String VIBE_PLAYER_PACKAGE = "com.rehansurahyo.vibeplayer";
 
     VidGrabNative(MainActivity activity) { this.activity = activity; }
@@ -127,7 +122,6 @@ class VidGrabNative {
                 resolver.update(uri, done, null, null);
                 return uri.toString();
             }
-
             File base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             File dir = new File(base, folder);
             if (!dir.exists() && !dir.mkdirs()) return "";
@@ -136,22 +130,15 @@ class VidGrabNative {
                 out.write(bytes);
             }
             return Uri.fromFile(file).toString();
-        } catch (Exception e) {
-            return "";
-        }
+        } catch (Exception e) { return ""; }
     }
 
     @JavascriptInterface
     public boolean deleteFile(String uriString) {
         try {
             Uri uri = Uri.parse(uriString);
-            if ("content".equalsIgnoreCase(uri.getScheme())) {
-                return activity.getContentResolver().delete(uri, null, null) > 0;
-            }
-            if ("file".equalsIgnoreCase(uri.getScheme())) {
-                File f = new File(uri.getPath());
-                return f.delete();
-            }
+            if ("content".equalsIgnoreCase(uri.getScheme())) return activity.getContentResolver().delete(uri, null, null) > 0;
+            if ("file".equalsIgnoreCase(uri.getScheme())) return new File(uri.getPath()).delete();
             return false;
         } catch (Exception e) { return false; }
     }
@@ -168,16 +155,13 @@ class VidGrabNative {
         try {
             activity.getPackageManager().getPackageInfo(VIBE_PLAYER_PACKAGE, 0);
             return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
+        } catch (PackageManager.NameNotFoundException e) { return false; }
     }
 
     @JavascriptInterface
     public boolean openWithVibePlayer(String uriString, String mimeType) {
         try {
-            Uri uri = Uri.parse(uriString);
-            Intent intent = buildViewIntent(uri, mimeType);
+            Intent intent = buildViewIntent(Uri.parse(uriString), mimeType);
             intent.setPackage(VIBE_PLAYER_PACKAGE);
             if (intent.resolveActivity(activity.getPackageManager()) == null) return false;
             activity.startActivity(intent);
@@ -188,10 +172,8 @@ class VidGrabNative {
     @JavascriptInterface
     public boolean openFile(String uriString, String mimeType) {
         try {
-            Uri uri = Uri.parse(uriString);
-            Intent intent = buildViewIntent(uri, mimeType);
-            Intent chooser = Intent.createChooser(intent, "Play with Vibe Player or another player");
-            activity.startActivity(chooser);
+            Intent intent = buildViewIntent(Uri.parse(uriString), mimeType);
+            activity.startActivity(Intent.createChooser(intent, "Play with Vibe Player or another player"));
             return true;
         } catch (Exception e) { return false; }
     }
@@ -227,7 +209,9 @@ if (fs.existsSync(gradleFile)) {
 const generatedKotlin = path.join(android, 'app', 'src', 'main', 'java', 'com', 'shanpalia', 'vidgrab', 'MainActivity.kt');
 if (fs.existsSync(generatedKotlin)) fs.unlinkSync(generatedKotlin);
 
+// Always replace Capacitor's default launcher icon with the VidGrab artwork.
 const sourceIcon = path.join(root, 'public', 'vidgrab-icon.png');
+if (!fs.existsSync(sourceIcon)) throw new Error('VidGrab icon not found at public/vidgrab-icon.png');
 const drawableDir = path.join(android, 'app', 'src', 'main', 'res', 'drawable');
 fs.mkdirSync(drawableDir, { recursive: true });
 fs.copyFileSync(sourceIcon, path.join(drawableDir, 'vidgrab_icon.png'));
@@ -236,7 +220,12 @@ const manifest = path.join(android, 'app', 'src', 'main', 'AndroidManifest.xml')
 if (fs.existsSync(manifest)) {
   let text = fs.readFileSync(manifest, 'utf8');
   text = text.replace(/android:icon="@[^"]+"/, 'android:icon="@drawable/vidgrab_icon"');
+  if (/android:roundIcon="@[^"]+"/.test(text)) {
+    text = text.replace(/android:roundIcon="@[^"]+"/, 'android:roundIcon="@drawable/vidgrab_icon"');
+  } else {
+    text = text.replace(/(<application\b[^>]*)(>)/, '$1 android:roundIcon="@drawable/vidgrab_icon"$2');
+  }
   fs.writeFileSync(manifest, text);
 }
 
-console.log('VidGrab Android native storage + Vibe Player bridge patched.');
+console.log('VidGrab Android native storage + Vibe Player bridge + VidGrab launcher icon patched.');
