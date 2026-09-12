@@ -11,6 +11,7 @@ fs.mkdirSync(javaDir, { recursive: true });
 const activity = `package com.shanpalia.vidgrab;
 
 import android.content.ContentResolver;
+import android.graphics.Color;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -32,6 +33,42 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // VIDGRAB_ANDROID_SAFE_AREA_V4: keep the app header below the
+        // status bar, punch-hole camera and display cutout on modern Android.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
+        getWindow().setStatusBarColor(Color.WHITE);
+        getWindow().setNavigationBarColor(Color.WHITE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flags = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
+            getWindow().getDecorView().setSystemUiVisibility(flags);
+        }
+
+        android.view.View decor = getWindow().getDecorView();
+        decor.setOnApplyWindowInsetsListener((view, insets) -> {
+            if (bridge != null && bridge.getWebView() != null) {
+                int top = 0;
+                int bottom = 0;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    android.graphics.Insets safe = insets.getInsets(
+                            android.view.WindowInsets.Type.systemBars()
+                                    | android.view.WindowInsets.Type.displayCutout());
+                    top = safe.top;
+                    bottom = safe.bottom;
+                } else {
+                    top = insets.getSystemWindowInsetTop();
+                    bottom = insets.getSystemWindowInsetBottom();
+                }
+                bridge.getWebView().setPadding(0, top, 0, bottom);
+            }
+            return insets;
+        });
+
         if (bridge != null && bridge.getWebView() != null) {
             bridge.getWebView().getSettings().setJavaScriptEnabled(true);
             bridge.getWebView().getSettings().setDomStorageEnabled(true);
@@ -228,4 +265,4 @@ if (fs.existsSync(manifest)) {
   fs.writeFileSync(manifest, text);
 }
 
-console.log('VidGrab Android native storage + Vibe Player bridge + VidGrab launcher icon patched.');
+console.log('VidGrab Android native bridge, safe-area handling, storage, Vibe Player and launcher icon patched.');
