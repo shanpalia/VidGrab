@@ -13,6 +13,7 @@ const activity = `package com.shanpalia.vidgrab;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -42,6 +43,12 @@ public class MainActivity extends BridgeActivity {
 
 class VidGrabNative {
     private final MainActivity activity;
+
+    // Vibe Player - Music Player currently published on Google Play.
+    // Keeping this package in one place makes the integration easy to update
+    // if the app publisher changes its Android application id.
+    private static final String VIBE_PLAYER_PACKAGE = "com.rehansurahyo.vibeplayer";
+
     VidGrabNative(MainActivity activity) { this.activity = activity; }
 
     private String categoryFolder(String category) {
@@ -149,13 +156,40 @@ class VidGrabNative {
         } catch (Exception e) { return false; }
     }
 
+    private Intent buildViewIntent(Uri uri, String mimeType) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(uri, mimeType == null ? "*/*" : mimeType);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return intent;
+    }
+
+    @JavascriptInterface
+    public boolean isVibePlayerInstalled() {
+        try {
+            activity.getPackageManager().getPackageInfo(VIBE_PLAYER_PACKAGE, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean openWithVibePlayer(String uriString, String mimeType) {
+        try {
+            Uri uri = Uri.parse(uriString);
+            Intent intent = buildViewIntent(uri, mimeType);
+            intent.setPackage(VIBE_PLAYER_PACKAGE);
+            if (intent.resolveActivity(activity.getPackageManager()) == null) return false;
+            activity.startActivity(intent);
+            return true;
+        } catch (Exception e) { return false; }
+    }
+
     @JavascriptInterface
     public boolean openFile(String uriString, String mimeType) {
         try {
             Uri uri = Uri.parse(uriString);
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(uri, mimeType == null ? "*/*" : mimeType);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent intent = buildViewIntent(uri, mimeType);
             Intent chooser = Intent.createChooser(intent, "Play with Vibe Player or another player");
             activity.startActivity(chooser);
             return true;
@@ -178,8 +212,6 @@ class VidGrabNative {
 `;
 fs.writeFileSync(path.join(javaDir, 'MainActivity.java'), activity);
 
-// Configure release signing for Codemagic. Codemagic injects CM_KEYSTORE_* variables
-// when the keystore reference is configured in codemagic.yaml.
 const gradleFile = path.join(android, 'app', 'build.gradle');
 if (fs.existsSync(gradleFile)) {
   let gradle = fs.readFileSync(gradleFile, 'utf8');
@@ -192,11 +224,9 @@ if (fs.existsSync(gradleFile)) {
   fs.writeFileSync(gradleFile, gradle);
 }
 
-// Remove any generated Kotlin MainActivity so there is only one Activity class.
 const generatedKotlin = path.join(android, 'app', 'src', 'main', 'java', 'com', 'shanpalia', 'vidgrab', 'MainActivity.kt');
 if (fs.existsSync(generatedKotlin)) fs.unlinkSync(generatedKotlin);
 
-// Copy the supplied VidGrab icon into drawable and make it the app icon.
 const sourceIcon = path.join(root, 'public', 'vidgrab-icon.png');
 const drawableDir = path.join(android, 'app', 'src', 'main', 'res', 'drawable');
 fs.mkdirSync(drawableDir, { recursive: true });
@@ -209,4 +239,4 @@ if (fs.existsSync(manifest)) {
   fs.writeFileSync(manifest, text);
 }
 
-console.log('VidGrab Android native storage bridge patched.');
+console.log('VidGrab Android native storage + Vibe Player bridge patched.');
