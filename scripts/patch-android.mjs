@@ -34,11 +34,14 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // VIDGRAB_ANDROID_SAFE_AREA_V4: keep the app header below the
-        // status bar, punch-hole camera and display cutout on modern Android.
+        // VIDGRAB_ANDROID_SAFE_AREA_V5
+        // Keep the WebView in the normal Android window area. This prevents
+        // the HTML header/content from being drawn underneath the status bar,
+        // punch-hole camera or display cutout on OnePlus and other devices.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
+            getWindow().setDecorFitsSystemWindows(true);
         }
+        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setStatusBarColor(Color.WHITE);
         getWindow().setNavigationBarColor(Color.WHITE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -49,27 +52,8 @@ public class MainActivity extends BridgeActivity {
             getWindow().getDecorView().setSystemUiVisibility(flags);
         }
 
-        android.view.View decor = getWindow().getDecorView();
-        decor.setOnApplyWindowInsetsListener((view, insets) -> {
-            if (bridge != null && bridge.getWebView() != null) {
-                int top = 0;
-                int bottom = 0;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    android.graphics.Insets safe = insets.getInsets(
-                            android.view.WindowInsets.Type.systemBars()
-                                    | android.view.WindowInsets.Type.displayCutout());
-                    top = safe.top;
-                    bottom = safe.bottom;
-                } else {
-                    top = insets.getSystemWindowInsetTop();
-                    bottom = insets.getSystemWindowInsetBottom();
-                }
-                bridge.getWebView().setPadding(0, top, 0, bottom);
-            }
-            return insets;
-        });
-
         if (bridge != null && bridge.getWebView() != null) {
+            bridge.getWebView().setPadding(0, 0, 0, 0);
             bridge.getWebView().getSettings().setJavaScriptEnabled(true);
             bridge.getWebView().getSettings().setDomStorageEnabled(true);
             bridge.getWebView().addJavascriptInterface(new VidGrabNative(this), "VidGrabNative");
@@ -91,9 +75,7 @@ class VidGrabNative {
     }
 
     @JavascriptInterface
-    public String getDownloadRoot() {
-        return Environment.DIRECTORY_DOWNLOADS + "/VidGrab";
-    }
+    public String getDownloadRoot() { return Environment.DIRECTORY_DOWNLOADS + "/VidGrab"; }
 
     @JavascriptInterface
     public boolean ensureFolders() {
@@ -108,8 +90,7 @@ class VidGrabNative {
                             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                             new String[]{MediaStore.Downloads._ID},
                             MediaStore.Downloads.DISPLAY_NAME + "=? AND " + MediaStore.Downloads.RELATIVE_PATH + "=?",
-                            new String[]{".vidgrab-folder", relative + "/"},
-                            null)) {
+                            new String[]{".vidgrab-folder", relative + "/"}, null)) {
                         exists = cursor != null && cursor.moveToFirst();
                     }
                     if (!exists) {
@@ -163,9 +144,7 @@ class VidGrabNative {
             File dir = new File(base, folder);
             if (!dir.exists() && !dir.mkdirs()) return "";
             File file = new File(dir, safeName);
-            try (FileOutputStream out = new FileOutputStream(file)) {
-                out.write(bytes);
-            }
+            try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
             return Uri.fromFile(file).toString();
         } catch (Exception e) { return ""; }
     }
@@ -246,7 +225,6 @@ if (fs.existsSync(gradleFile)) {
 const generatedKotlin = path.join(android, 'app', 'src', 'main', 'java', 'com', 'shanpalia', 'vidgrab', 'MainActivity.kt');
 if (fs.existsSync(generatedKotlin)) fs.unlinkSync(generatedKotlin);
 
-// Always replace Capacitor's default launcher icon with the VidGrab artwork.
 const sourceIcon = path.join(root, 'public', 'vidgrab-icon.png');
 if (!fs.existsSync(sourceIcon)) throw new Error('VidGrab icon not found at public/vidgrab-icon.png');
 const drawableDir = path.join(android, 'app', 'src', 'main', 'res', 'drawable');
@@ -257,12 +235,9 @@ const manifest = path.join(android, 'app', 'src', 'main', 'AndroidManifest.xml')
 if (fs.existsSync(manifest)) {
   let text = fs.readFileSync(manifest, 'utf8');
   text = text.replace(/android:icon="@[^"]+"/, 'android:icon="@drawable/vidgrab_icon"');
-  if (/android:roundIcon="@[^"]+"/.test(text)) {
-    text = text.replace(/android:roundIcon="@[^"]+"/, 'android:roundIcon="@drawable/vidgrab_icon"');
-  } else {
-    text = text.replace(/(<application\b[^>]*)(>)/, '$1 android:roundIcon="@drawable/vidgrab_icon"$2');
-  }
+  if (/android:roundIcon="@[^"]+"/.test(text)) text = text.replace(/android:roundIcon="@[^"]+"/, 'android:roundIcon="@drawable/vidgrab_icon"');
+  else text = text.replace(/(<application\b[^>]*)(>)/, '$1 android:roundIcon="@drawable/vidgrab_icon"$2');
   fs.writeFileSync(manifest, text);
 }
 
-console.log('VidGrab Android native bridge, safe-area handling, storage, Vibe Player and launcher icon patched.');
+console.log('VidGrab Android native bridge, normal safe-area window, storage, Vibe Player and launcher icon patched.');
