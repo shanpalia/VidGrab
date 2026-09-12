@@ -41,7 +41,6 @@ export default function App() {
   const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(true);
   const [activeImageViewerFile, setActiveImageViewerFile] = useState<DownloadedFile | null>(null);
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
-  const [clipboardBusy, setClipboardBusy] = useState(false);
 
   const refreshStorage = () => { setFiles(StorageService.getFiles()); setHistory(StorageService.getHistory()); };
   const handlePlayFile = (file: DownloadedFile) => {
@@ -57,7 +56,7 @@ export default function App() {
     let cancelled = false;
     let lastSeen = '';
     const check = async () => {
-      if (cancelled || clipboardBusy) return;
+      if (cancelled) return;
       let text = '';
       try { text = String((window as any).VidGrabNative?.getClipboardText?.() || '').trim(); } catch {}
       if (!text && navigator.clipboard?.readText) { try { text = (await navigator.clipboard.readText()).trim(); } catch {} }
@@ -68,7 +67,7 @@ export default function App() {
     void check();
     const timer = window.setInterval(check, 1200);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [showSplash, clipboardBusy]);
+  }, [showSplash]);
 
   const handleGrab = async (url: string) => {
     setErrorMessage(undefined);
@@ -119,7 +118,7 @@ export default function App() {
             <div className="px-6 pt-6 pb-3"><h2 className="text-xl font-black text-gray-900">Go to your copied URL</h2><p className="mt-3 text-sm text-gray-500 break-all line-clamp-3">{clipboardUrl}</p></div>
             <div className="px-6 py-4 flex items-center justify-end gap-7 border-t border-gray-100">
               <button onClick={() => setClipboardUrl(null)} className="font-bold text-gray-500">LATER</button>
-              <button onClick={async () => { const url = clipboardUrl; setClipboardUrl(null); setClipboardBusy(true); await handleGrab(url); setClipboardBusy(false); }} className="font-bold text-sky-600">GO</button>
+              <button onClick={async () => { const url = clipboardUrl; setClipboardUrl(null); await handleGrab(url); }} className="font-bold text-sky-600">GO</button>
             </div>
           </div>
         </div>
