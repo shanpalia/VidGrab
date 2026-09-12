@@ -1,51 +1,13 @@
 @import "tailwindcss";
 
-/* Android app shell: native MainActivity applies the real system-bar/cutout
-   inset to the WebView, so every VidGrab screen shares one safe coordinate. */
-html,
-body,
-#root {
-  width: 100%;
-  min-width: 0;
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  min-height: 100%;
-  overflow-x: hidden;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-body {
-  min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-x: none;
-  background: #f8fafc;
-}
-
-#root {
-  min-height: 100dvh;
-  overflow-x: clip;
-}
-
-*,
-*::before,
-*::after { box-sizing: border-box; }
-
-img,
-video,
-canvas,
-svg { max-width: 100%; }
-
-button,
-a,
-input,
-textarea,
-select { max-width: 100%; }
+/* Android app shell: native MainActivity owns the system-bar/cutout inset. */
+html, body, #root { width: 100%; min-width: 0; min-height: 100%; margin: 0; padding: 0; }
+html { min-height: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { min-height: 100dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior-x: none; background: #f8fafc; }
+#root { min-height: 100dvh; overflow-x: clip; }
+*, *::before, *::after { box-sizing: border-box; }
+img, video, canvas, svg { max-width: 100%; }
+button, a, input, textarea, select { max-width: 100%; }
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -53,42 +15,29 @@ select { max-width: 100%; }
   .safe-area-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
 }
 
-/* One consistent Android mobile layout for every screen. The native activity
-   already places the WebView below the camera/status cutout, therefore the
-   React header must NOT add another top inset. */
+/* Browser is a separate full-height screen. The only bottom navigation is
+   VidGrab's fixed BottomNav, so reserve its 72px instead of stacking another bar. */
+.vidgrab-browser-main {
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 72px;
+}
+.vidgrab-browser-safe {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+}
+
 @media (max-width: 767px) {
   .vidgrab-top-safe { padding-top: 0 !important; }
-
-  .vidgrab-app-main {
-    width: 100%;
-    min-height: calc(100dvh - 56px);
-    padding-bottom: 72px;
-  }
-
-  .vidgrab-screen {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 12px;
-  }
-
-  .vidgrab-browser-safe {
-    min-height: calc(100dvh - 56px);
-    padding-bottom: max(72px, calc(56px + env(safe-area-inset-bottom)));
-  }
-
-  .vidgrab-bottom-safe {
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-  }
+  .vidgrab-app-main { width: 100%; min-height: calc(100dvh - 56px); padding-bottom: 72px; }
+  .vidgrab-screen { width: 100%; max-width: none; margin: 0; padding: 12px; }
+  .vidgrab-bottom-safe { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-@keyframes splashProgress {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(200%); }
-}
+@keyframes splashProgress { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
