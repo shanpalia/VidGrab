@@ -4,8 +4,11 @@ type ViteEnv = {
 
 const env = (import.meta as ImportMeta & { env?: ViteEnv }).env;
 
-// Keep the URL configurable rather than inventing a PaliaAPK HUB listing URL.
-export const PALIAAPK_HUB_STORE_URL = (env?.VITE_PALIAAPK_HUB_STORE_URL || '').trim();
+// PaliaAPK HUB fallback. A build-time env value can override this later
+// if the Vibe Player listing is moved to a dedicated product URL.
+export const PALIAAPK_HUB_STORE_URL = (
+  env?.VITE_PALIAAPK_HUB_STORE_URL || 'https://shanpalia.github.io/H'
+).trim();
 
 export function openPaliaApkHubStore(): boolean {
   const url = PALIAAPK_HUB_STORE_URL;
