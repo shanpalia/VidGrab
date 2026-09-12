@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
     environment:
       node: latest
-      java: 17
+      java: 21
       # Upload an Android keystore in Codemagic > Team settings >
       # codemagic.yaml settings > Code signing identities > Android keystores
       # and use this exact reference name: paliaapk-release
