@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "android:prepare": "npm run build && (test -d android || npx cap add android) && npx cap copy android && node scripts/patch-android.mjs",
+    "android:prepare": "npm run build && (test -d android || npx cap add android) && npx cap copy android && node scripts/patch-android.mjs && node scripts/fix-edge-to-edge.mjs",
     "android:build": "npm run android:prepare && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
