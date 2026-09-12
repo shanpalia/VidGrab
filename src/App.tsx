@@ -99,9 +99,11 @@ export default function App() {
 
   if (showSplash) return <SplashScreen onFinished={() => setShowSplash(false)} />;
 
+  const isBrowser = activeTab === 'browser';
+
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 flex flex-col font-sans selection:bg-red-500 selection:text-white">
-      {activeTab !== 'browser' && (
+      {!isBrowser && (
         <Header
           activeTab={activeTab}
           onNavigate={(tab) => { setActiveTab(tab); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -109,7 +111,7 @@ export default function App() {
         />
       )}
 
-      <main className="flex-1 vidgrab-app-main">
+      <main className={isBrowser ? 'flex-1 min-h-0 overflow-hidden vidgrab-browser-main' : 'flex-1 vidgrab-app-main'}>
         {activeTab === 'home' && (
           <HomePage onOpenBrowser={handleOpenBrowser} onOpenDownloadPage={handleGrab} onOpenMoreSites={() => setActiveTab('platforms')} />
         )}
@@ -161,7 +163,7 @@ export default function App() {
         {activeTab === 'me' && <MorePage />}
       </main>
 
-      {activeTab !== 'browser' && <Footer />}
+      {!isBrowser && <Footer />}
 
       {activePlaybackFile && !isPlayerMaximized && (
         <MiniPlayer file={activePlaybackFile} isPlaying={isPlaybackPlaying} onTogglePlay={(e) => { e.stopPropagation(); setIsPlaybackPlaying(!isPlaybackPlaying); }} onMaximize={() => setIsPlayerMaximized(true)} onClose={(e) => { e.stopPropagation(); setActivePlaybackFile(null); }} />
@@ -207,11 +209,13 @@ export default function App() {
         />
       )}
 
-      <BottomNav
-        activeTab={activeTab}
-        onNavigate={(tab) => { setActiveTab(tab); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-        filesCount={files.length}
-      />
+      {!isBrowser && (
+        <BottomNav
+          activeTab={activeTab}
+          onNavigate={(tab) => { setActiveTab(tab); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          filesCount={files.length}
+        />
+      )}
     </div>
   );
 }
