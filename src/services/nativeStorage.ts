@@ -29,7 +29,7 @@ function toBase64(bytes: Uint8Array): string {
   let binary = '';
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, i + chunk)));
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
   }
   return btoa(binary);
 }
@@ -99,6 +99,14 @@ export class NativeStorage {
 
   static open(uri: string | undefined, mimeType: string): boolean {
     if (!uri || !this.isAndroidBridgeAvailable || !window.VidGrabNative) return false;
+
+    // For video/audio, the existing "Play with Vibe Player" menu now gets
+    // a direct Vibe Player launch rather than an Android chooser.
+    if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) {
+      if (!this.isVibePlayerInstalled()) return false;
+      return this.openWithVibePlayer(uri, mimeType);
+    }
+
     return !!window.VidGrabNative.openFile(uri, mimeType);
   }
 
