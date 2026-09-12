@@ -82,17 +82,17 @@ const youtubeSearchFallback = `
       if (video?.videoId && !seen.has(video.videoId)) {
         seen.add(video.videoId);
         const thumbs = video.thumbnail?.thumbnails || [];
-        const thumb = thumbs.length ? thumbs[thumbs.length - 1].url : `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
+        const thumb = thumbs.length ? thumbs[thumbs.length - 1].url : 'https://i.ytimg.com/vi/' + video.videoId + '/hqdefault.jpg';
         out.push({
           id: video.videoId,
-          title: textOf(video.title) || `YouTube Video (${video.videoId})`,
+          title: textOf(video.title) || 'YouTube Video (' + video.videoId + ')',
           channel: textOf(video.ownerText) || textOf(video.longBylineText) || 'YouTube',
           views: textOf(video.viewCountText) || '',
           publishedAt: textOf(video.publishedTimeText) || '',
           duration: textOf(video.lengthText) || '',
           thumbnail: thumb,
-          url: `https://www.youtube.com/watch?v=${video.videoId}`,
-          videoUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
+          url: 'https://www.youtube.com/watch?v=' + video.videoId,
+          videoUrl: 'https://www.youtube.com/watch?v=' + video.videoId,
         });
       }
       for (const value of Object.values(node)) walk(value);
