@@ -9,13 +9,61 @@ let text = fs.readFileSync(mainActivity, 'utf8');
 if (!text.includes('import android.graphics.Color;')) {
   text = text.replace('import android.content.ContentResolver;\n', 'import android.content.ContentResolver;\nimport android.graphics.Color;\n');
 }
+if (!text.includes('import android.view.View;')) {
+  text = text.replace('import android.webkit.JavascriptInterface;\n', 'import android.webkit.JavascriptInterface;\nimport android.view.View;\n');
+}
 
-const oldBlock = '        super.onCreate(savedInstanceState);\n        if (bridge != null && bridge.getWebView() != null) {';
-const newBlock = `        super.onCreate(savedInstanceState);\n\n        // Keep the WebView content below the status bar/camera cutout and above\n        // the navigation area. This prevents the VidGrab header from entering\n        // the front-camera/notch safe area on modern Android devices.\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n            getWindow().setDecorFitsSystemWindows(false);\n        }\n        getWindow().setStatusBarColor(Color.WHITE);\n        getWindow().setNavigationBarColor(Color.WHITE);\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {\n            getWindow().getDecorView().setSystemUiVisibility(\n                android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR |\n                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0)\n            );\n        }\n\n        if (bridge != null && bridge.getWebView() != null) {\n            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n                bridge.getWebView().setOnApplyWindowInsetsListener((view, insets) -> {\n                    android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());\n                    view.setPadding(view.getPaddingLeft(), bars.top, view.getPaddingRight(), bars.bottom);\n                    return insets;\n                });\n                bridge.getWebView().requestApplyInsets();\n            }`;
+const start = text.indexOf('    @Override\n    public void onCreate(Bundle savedInstanceState) {');
+const end = text.indexOf('\n    }\n}\n\nclass VidGrabNative', start);
+if (start !== -1 && end !== -1) {
+  const method = `    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-if (text.includes(oldBlock) && !text.includes('camera cutout safe area')) {
-  text = text.replace(oldBlock, newBlock);
+        // Android 15+ uses edge-to-edge by default. Apply the real status-bar
+        // and display-cutout inset to the WebView so no VidGrab header/control
+        // can sit underneath the front camera or punch-hole area.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
+        getWindow().setStatusBarColor(Color.WHITE);
+        getWindow().setNavigationBarColor(Color.WHITE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            getWindow().getDecorView().setSystemUiVisibility(flags);
+        }
+
+        View decor = getWindow().getDecorView();
+        decor.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top = 0;
+            int bottom = 0;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.displayCutout());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && insets.getDisplayCutout() != null) {
+                top = Math.max(top, insets.getDisplayCutout().getSafeInsetTop());
+                bottom = Math.max(bottom, insets.getDisplayCutout().getSafeInsetBottom());
+            }
+            if (bridge != null && bridge.getWebView() != null) {
+                View webView = bridge.getWebView();
+                webView.setPadding(webView.getPaddingLeft(), top, webView.getPaddingRight(), bottom);
+            }
+            return insets;
+        });
+        decor.post(() -> decor.requestApplyInsets());
+
+        if (bridge != null && bridge.getWebView() != null) {
+            bridge.getWebView().getSettings().setJavaScriptEnabled(true);
+            bridge.getWebView().getSettings().setDomStorageEnabled(true);
+            bridge.getWebView().addJavascriptInterface(new VidGrabNative(this), "VidGrabNative");
+            bridge.getWebView().setPadding(bridge.getWebView().getPaddingLeft(), 0, bridge.getWebView().getPaddingRight(), 0);
+            bridge.getWebView().post(() -> decor.requestApplyInsets());
+        }
+    }`;
+  text = text.slice(0, start) + method + text.slice(end + 6);
 }
 
 fs.writeFileSync(mainActivity, text);
-console.log('VidGrab Android edge-to-edge/camera-cutout safe-area patched.');
+console.log('VidGrab Android system-bar + display-cutout insets patched.');
