@@ -1,69 +1,19 @@
 import { MediaMetadata, FormatsResponse, DownloadProgressInfo, DownloadStatus } from '../types';
-
-export interface ApiErrorResponse { success: false; errorCode: string; message: string; }
-export interface InitDownloadParams { formatId: string; fileName?: string; customTitle?: string; url?: string; mediaId?: string; durationSeconds?: number; thumbnail?: string; type?: string; previewUrl?: string; }
-export interface InitDownloadResponse { success: boolean; downloadId: string; fileName: string; ext: string; formatLabel: string; mediaType: 'video'|'audio'|'image'; totalBytes: number; fileSizeStr: string; contentType: string; fileUrl: string; progressUrl: string; }
-
-export class ApiService {
-  static async getMetadata(url: string): Promise<MediaMetadata> {
-    const response = await fetch('/api/metadata', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.message || this.mapErrorCode(data.errorCode || 'BACKEND_ERROR'));
-    return data.data;
-  }
-  static async getFormats(durationSeconds=180, availableQualities:string[]=[], url?:string):Promise<FormatsResponse>{
-    const response=await fetch('/api/formats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({durationSeconds,qualities:availableQualities,url})});
-    const data=await response.json(); if(!response.ok||!data.success) throw new Error(data.message||'Failed to retrieve available formats.');
-    return {audioFormats:data.audioFormats||[],videoFormats:data.videoFormats||[],imageFormats:data.imageFormats||[]};
-  }
-  static async initDownload(params:InitDownloadParams):Promise<InitDownloadResponse>{const response=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)});const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||this.mapErrorCode(data.errorCode||'DOWNLOAD_ERROR'));return data;}
-  static async getProgress(downloadId:string):Promise<DownloadProgressInfo>{const response=await fetch(`/api/download/${encodeURIComponent(downloadId)}/progress`);const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||'Failed to check download progress.');return {downloadId:data.downloadId,status:data.status,percent:data.percent,downloadedBytes:data.downloadedBytes,totalBytes:data.totalBytes,speed:data.speed,fileName:data.fileName,formatLabel:data.formatLabel,ext:data.ext,type:data.mediaType,thumbnail:data.thumbnail,errorMessage:data.errorMessage};}
-  static async cancelDownload(downloadId:string):Promise<boolean>{try{const r=await fetch(`/api/download/${encodeURIComponent(downloadId)}/cancel`,{method:'POST'});return r.ok;}catch{return false;}}
-  static async downloadFileStream(downloadId:string,signal?:AbortSignal,onProgress?:(info:{percent:number;downloadedBytes:number;totalBytes:number;speed:string;status:DownloadStatus})=>void):Promise<{blob:Blob;contentType:string}>{
-    const response=await fetch(`/api/download/${encodeURIComponent(downloadId)}/file`,{signal});if(!response.ok)throw new Error('Failed to retrieve media file from server.');
-    const contentType=response.headers.get('Content-Type')||'video/mp4';const totalBytes=parseInt(response.headers.get('Content-Length')||'0',10);
-    if(!response.body){const blob=await response.blob();onProgress?.({percent:100,downloadedBytes:blob.size,totalBytes:totalBytes||blob.size,speed:'0 B/s',status:'completed'});return{blob,contentType};}
-    const reader=response.body.getReader();const chunks:Uint8Array[]=[];let downloadedBytes=0,lastSampleTime=performance.now(),lastSampleBytes=0,speed='0 B/s';
-    while(true){if(signal?.aborted)throw new Error('DOWNLOAD_CANCELLED');const{done,value}=await reader.read();if(done)break;if(value){chunks.push(value);downloadedBytes+=value.length;const now=performance.now(),dt=(now-lastSampleTime)/1000;if(dt>=.25){speed=this.formatSpeed((downloadedBytes-lastSampleBytes)/dt);lastSampleTime=now;lastSampleBytes=downloadedBytes;}const percent=totalBytes>0?Math.min(100,Math.round(downloadedBytes/totalBytes*100)):-1;onProgress?.({percent,downloadedBytes,totalBytes,speed,status:percent>=100?'converting':'downloading'});}}
-    const blob=new Blob(chunks,{type:contentType});onProgress?.({percent:100,downloadedBytes:blob.size,totalBytes:totalBytes||blob.size,speed,status:'completed'});return{blob,contentType};
-  }
-  static formatSpeed(b:number){if(b<=0||!isFinite(b))return'0 B/s';if(b<1024)return`${Math.round(b)} B/s`;if(b<1048576)return`${(b/1024).toFixed(1)} KB/s`;if(b<1073741824)return`${(b/1048576).toFixed(1)} MB/s`;return`${(b/1073741824).toFixed(2)} GB/s`;}
-  static formatBytes(b:number){if(b<=0||!isFinite(b))return'0 MB';if(b<1024)return`${b} B`;if(b<1048576)return`${(b/1024).toFixed(1)} KB`;if(b<1073741824)return`${(b/1048576).toFixed(1)} MB`;return`${(b/1073741824).toFixed(2)} GB`;}
-  static mapErrorCode(code:string){switch(code){case'INVALID_URL':return'Please enter a valid media link.';case'UNSUPPORTED_WEBSITE':return'This website is not currently supported.';case'PRIVATE_CONTENT':return'This media is private or DRM-restricted.';case'NO_MEDIA':return'No downloadable media streams were found.';case'BACKEND_ERROR':return'VidGrab backend service is temporarily busy.';case'CONVERSION_ERROR':return'Unable to convert this media.';case'DOWNLOAD_ERROR':return'Download interrupted. Please retry.';case'DOWNLOAD_CANCELLED':return'Download was cancelled.';default:return'An unexpected error occurred.';}}
-  static async grab(url:string){try{const r=await fetch('/api/grab',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});return await r.json();}catch{return{downloadable:false,message:'No downloadable media detected.'};}}
-  static async getYouTubeSuggestions(query:string):Promise<string[]>{if(!query.trim())return[];try{const r=await fetch(`/api/youtube/suggestions?q=${encodeURIComponent(query.trim())}`);const d=await r.json();return d.suggestions||[];}catch{return[];}}
-
-  // Real search for APKs: local backend first, then several public unauthenticated
-  // providers. Each provider is optional so one outage does not break search.
-  static async getYouTubeSearchFromPublicApi(query:string):Promise<any[]>{
-    const q=query.trim();if(!q)return[];
-    const providers=[
-      {base:'https://pipedapi.kavin.rocks',kind:'piped'},
-      {base:'https://pipedapi.leptons.xyz',kind:'piped'},
-      {base:'https://pipedapi.nosebs.ru',kind:'piped'},
-      {base:'https://pipedapi.adminforge.de',kind:'piped'},
-      {base:'https://api.piped.yt',kind:'piped'},
-      {base:'https://yewtu.be',kind:'invidious'},
-      {base:'https://yt.artemislena.eu',kind:'invidious'},
-      {base:'https://inv.tux.pizza',kind:'invidious'}
-    ];
-    for(const p of providers){
-      try{
-        const endpoint=p.kind==='piped'?`${p.base}/search?q=${encodeURIComponent(q)}&filter=videos`:`${p.base}/api/v1/search?q=${encodeURIComponent(q)}&type=video&page=1&region=IN`;
-        const r=await fetch(endpoint,{signal:AbortSignal.timeout(7000)});if(!r.ok)continue;const d=await r.json();
-        const raw=p.kind==='piped'?(Array.isArray(d?.items)?d.items:[]):(Array.isArray(d)?d:[]);
-        const out=raw.filter((x:any)=>p.kind==='piped'?x?.type==='stream'&&x?.id:x?.type==='video'&&x?.videoId).slice(0,20).map((x:any)=>{const id=p.kind==='piped'?x.id:x.videoId;const thumbs=x.videoThumbnails||[];return{id,title:x.title||'YouTube Video',channel:p.kind==='piped'?(x.uploaderName||'YouTube'):(x.author||'YouTube'),views:x.viewCount?`${x.viewCount} views`:(x.views?`${x.views} views`:''),publishedAt:x.publishedText||x.uploadedDate||'',duration:x.lengthSeconds?`${Math.floor(x.lengthSeconds/60)}:${String(x.lengthSeconds%60).padStart(2,'0')}`:(x.duration||''),thumbnail:p.kind==='invidious'?(thumbs[thumbs.length-1]?.url||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`):(x.thumbnail||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`),url:`https://www.youtube.com/watch?v=${id}`,videoUrl:`https://www.youtube.com/watch?v=${id}`};});
-        if(out.length)return out;
-      }catch{}
-    }
-    return [];
-  }
-
-  static async getYouTubeSearch(query:string):Promise<any[]>{
-    if(!query.trim())return[];
-    try{const r=await fetch(`/api/youtube/search?q=${encodeURIComponent(query.trim())}`,{signal:AbortSignal.timeout(7000)});const d=await r.json();if(Array.isArray(d.results)&&d.results.length)return d.results;}catch{}
-    return this.getYouTubeSearchFromPublicApi(query);
-  }
-  static async getYouTubeFeed(category:string='all'):Promise<any[]>{try{const r=await fetch(`/api/youtube/feed?category=${encodeURIComponent(category)}`);const d=await r.json();return d.results||[];}catch{return[];}}
-  static async checkFrameEmbeddable(url:string){try{const r=await fetch(`/api/browser/frame-check?url=${encodeURIComponent(url)}`);return await r.json();}catch{return{embeddable:false,reason:'network_restriction'};}}
+export interface InitDownloadParams { formatId:string;fileName?:string;customTitle?:string;url?:string;mediaId?:string;durationSeconds?:number;thumbnail?:string;type?:string;previewUrl?:string; }
+export interface InitDownloadResponse { success:boolean;downloadId:string;fileName:string;ext:string;formatLabel:string;mediaType:'video'|'audio'|'image';totalBytes:number;fileSizeStr:string;contentType:string;fileUrl:string;progressUrl:string; }
+export class ApiService{
+ static async getMetadata(url:string):Promise<MediaMetadata>{const r=await fetch('/api/metadata',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.message||'Unable to read media.');return d.data;}
+ static async getFormats(durationSeconds=180,availableQualities:string[]=[],url?:string):Promise<FormatsResponse>{const r=await fetch('/api/formats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({durationSeconds,qualities:availableQualities,url})});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.message||'Failed to retrieve formats.');return{audioFormats:d.audioFormats||[],videoFormats:d.videoFormats||[],imageFormats:d.imageFormats||[]};}
+ static async initDownload(p:InitDownloadParams):Promise<InitDownloadResponse>{const r=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.message||'Download failed.');return d;}
+ static async getProgress(id:string):Promise<DownloadProgressInfo>{const r=await fetch(`/api/download/${encodeURIComponent(id)}/progress`);const d=await r.json();if(!r.ok||!d.success)throw new Error(d.message||'Progress unavailable.');return{downloadId:d.downloadId,status:d.status,percent:d.percent,downloadedBytes:d.downloadedBytes,totalBytes:d.totalBytes,speed:d.speed,fileName:d.fileName,formatLabel:d.formatLabel,ext:d.ext,type:d.mediaType,thumbnail:d.thumbnail,errorMessage:d.errorMessage};}
+ static async cancelDownload(id:string){try{return(await fetch(`/api/download/${encodeURIComponent(id)}/cancel`,{method:'POST'})).ok}catch{return false}}
+ static async downloadFileStream(id:string,signal?:AbortSignal,onProgress?:(x:{percent:number;downloadedBytes:number;totalBytes:number;speed:string;status:DownloadStatus})=>void){const r=await fetch(`/api/download/${encodeURIComponent(id)}/file`,{signal});if(!r.ok)throw new Error('Failed to retrieve media file.');const ct=r.headers.get('Content-Type')||'video/mp4',total=parseInt(r.headers.get('Content-Length')||'0',10);if(!r.body){const b=await r.blob();onProgress?.({percent:100,downloadedBytes:b.size,totalBytes:total||b.size,speed:'0 B/s',status:'completed'});return{blob:b,contentType:ct}}const rd=r.body.getReader(),chunks:Uint8Array[]=[];let got=0,last=performance.now(),lastB=0,sp='0 B/s';for(;;){if(signal?.aborted)throw new Error('DOWNLOAD_CANCELLED');const{x,done}=await rd.read().then(v=>({x:v.value,done:v.done}));if(done)break;if(x){chunks.push(x);got+=x.length;const now=performance.now(),dt=(now-last)/1000;if(dt>=.25){sp=this.formatSpeed((got-lastB)/dt);last=now;lastB=got}const pct=total?Math.min(100,Math.round(got/total*100)):-1;onProgress?.({percent:pct,downloadedBytes:got,totalBytes:total,speed:sp,status:pct>=100?'converting':'downloading'})}}const b=new Blob(chunks,{type:ct});onProgress?.({percent:100,downloadedBytes:b.size,totalBytes:total||b.size,speed:sp,status:'completed'});return{blob:b,contentType:ct}}
+ static formatSpeed(b:number){if(b<=0||!isFinite(b))return'0 B/s';if(b<1024)return`${Math.round(b)} B/s`;if(b<1048576)return`${(b/1024).toFixed(1)} KB/s`;if(b<1073741824)return`${(b/1048576).toFixed(1)} MB/s`;return`${(b/1073741824).toFixed(2)} GB/s`}
+ static formatBytes(b:number){if(b<=0||!isFinite(b))return'0 MB';if(b<1024)return`${b} B`;if(b<1048576)return`${(b/1024).toFixed(1)} KB`;if(b<1073741824)return`${(b/1048576).toFixed(1)} MB`;return`${(b/1073741824).toFixed(2)} GB`}
+ static async grab(url:string){try{return await(await fetch('/api/grab',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})})).json()}catch{return{downloadable:false,message:'No downloadable media detected.'}}}
+ static async getYouTubeSuggestions(q:string):Promise<string[]>{try{return(await(await fetch(`/api/youtube/suggestions?q=${encodeURIComponent(q)}`)).json()).suggestions||[]}catch{return[]}}
+ static async getYouTubeSearchFromPublicApi(q:string):Promise<any[]>{if(!q.trim())return[];const ps=[['https://pipedapi.kavin.rocks','p'],['https://pipedapi.leptons.xyz','p'],['https://pipedapi.nosebs.ru','p'],['https://pipedapi.adminforge.de','p'],['https://api.piped.yt','p'],['https://yewtu.be','i'],['https://yt.artemislena.eu','i'],['https://inv.tux.pizza','i']] as const;for(const[p,k]of ps){try{const url=k==='p'?`${p}/search?q=${encodeURIComponent(q)}&filter=videos`:`${p}/api/v1/search?q=${encodeURIComponent(q)}&type=video&page=1&region=IN`;const r=await fetch(url,{signal:AbortSignal.timeout(7000)});if(!r.ok)continue;const d=await r.json();const a=k==='p'?(Array.isArray(d?.items)?d.items:[]):(Array.isArray(d)?d:[]);const out=a.filter((x:any)=>k==='p'?x?.type==='stream'&&x?.id:x?.type==='video'&&x?.videoId).slice(0,20).map((x:any)=>{const id=k==='p'?x.id:x.videoId;const th=x.videoThumbnails||[];return{id,title:x.title||'YouTube Video',channel:k==='p'?(x.uploaderName||'YouTube'):(x.author||'YouTube'),views:x.viewCount?`${x.viewCount} views`:x.views?`${x.views} views`:'',publishedAt:x.publishedText||x.uploadedDate||'',duration:x.lengthSeconds?`${Math.floor(x.lengthSeconds/60)}:${String(x.lengthSeconds%60).padStart(2,'0')}`:x.duration||'',thumbnail:k==='i'?(th[th.length-1]?.url||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`):(x.thumbnail||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`),url:`https://www.youtube.com/watch?v=${id}`,videoUrl:`https://www.youtube.com/watch?v=${id}`}});if(out.length)return out}catch{}}return[]}
+ static async getYouTubeSearch(q:string){if(!q.trim())return[];try{const r=await fetch(`/api/youtube/search?q=${encodeURIComponent(q.trim())}`,{signal:AbortSignal.timeout(7000)});const d=await r.json();if(Array.isArray(d.results)&&d.results.length)return d.results}catch{}return this.getYouTubeSearchFromPublicApi(q)}
+ static async getYouTubeFeed(c='all'){try{const d=await(await fetch(`/api/youtube/feed?category=${encodeURIComponent(c)}`)).json();return d.results||[]}catch{return[]}}
+ static async checkFrameEmbeddable(url:string){try{return await(await fetch(`/api/browser/frame-check?url=${encodeURIComponent(url)}`)).json()}catch{return{embeddable:false}}}
 }
