@@ -6,23 +6,17 @@ const mainActivity = path.join(root, 'android', 'app', 'src', 'main', 'java', 'c
 if (!fs.existsSync(mainActivity)) throw new Error('MainActivity.java not found');
 
 let text = fs.readFileSync(mainActivity, 'utf8');
-if (!text.includes('import android.graphics.Color;')) {
-  text = text.replace('import android.content.ContentResolver;\n', 'import android.content.ContentResolver;\nimport android.graphics.Color;\n');
-}
-if (!text.includes('import android.view.View;')) {
-  text = text.replace('import android.webkit.JavascriptInterface;\n', 'import android.webkit.JavascriptInterface;\nimport android.view.View;\n');
-}
+if (!text.includes('import android.graphics.Color;')) text = text.replace('import android.content.ContentResolver;\n', 'import android.content.ContentResolver;\nimport android.graphics.Color;\n');
+if (!text.includes('import android.view.View;')) text = text.replace('import android.webkit.JavascriptInterface;\n', 'import android.webkit.JavascriptInterface;\nimport android.view.View;\n');
 
 const start = text.indexOf('    @Override\n    public void onCreate(Bundle savedInstanceState) {');
 const end = text.indexOf('\n    }\n}\n\nclass VidGrabNative', start);
-if (start !== -1 && end !== -1) {
-  const method = `    @Override
+if (start === -1 || end === -1) throw new Error('Unable to locate MainActivity.onCreate');
+
+const method = `    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Android 15+ uses edge-to-edge by default. Apply the real status-bar
-        // and display-cutout inset to the WebView so no VidGrab header/control
-        // can sit underneath the front camera or punch-hole area.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             getWindow().setDecorFitsSystemWindows(false);
         }
@@ -43,8 +37,8 @@ if (start !== -1 && end !== -1) {
                 top = bars.top;
                 bottom = bars.bottom;
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && insets.getDisplayCutout() != null) {
-                top = Math.max(top, insets.getDisplayCutout().getSafeInsetTop());
-                bottom = Math.max(bottom, insets.getDisplayCutout().getSafeInsetBottom());
+                top = insets.getDisplayCutout().getSafeInsetTop();
+                bottom = insets.getDisplayCutout().getSafeInsetBottom();
             }
             if (bridge != null && bridge.getWebView() != null) {
                 View webView = bridge.getWebView();
@@ -52,18 +46,15 @@ if (start !== -1 && end !== -1) {
             }
             return insets;
         });
-        decor.post(() -> decor.requestApplyInsets());
 
         if (bridge != null && bridge.getWebView() != null) {
             bridge.getWebView().getSettings().setJavaScriptEnabled(true);
             bridge.getWebView().getSettings().setDomStorageEnabled(true);
             bridge.getWebView().addJavascriptInterface(new VidGrabNative(this), "VidGrabNative");
-            bridge.getWebView().setPadding(bridge.getWebView().getPaddingLeft(), 0, bridge.getWebView().getPaddingRight(), 0);
             bridge.getWebView().post(() -> decor.requestApplyInsets());
         }
+        decor.post(() -> decor.requestApplyInsets());
     }`;
-  text = text.slice(0, start) + method + text.slice(end + 6);
-}
-
+text = text.slice(0, start) + method + text.slice(end + 6);
 fs.writeFileSync(mainActivity, text);
-console.log('VidGrab Android system-bar + display-cutout insets patched.');
+console.log('VidGrab camera/display-cutout safe-area patch ready.');
