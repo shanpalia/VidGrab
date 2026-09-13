@@ -1,80 +1,27 @@
 @import "tailwindcss";
-
-html, body, #root { width: 100%; min-width: 0; min-height: 100%; margin: 0; padding: 0; }
-html { min-height: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { min-height: 100dvh; overflow: hidden; overscroll-behavior: none; background: #f8fafc; }
-#root { min-height: 100dvh; height: 100dvh; overflow: hidden; }
-*, *::before, *::after { box-sizing: border-box; }
-img, video, canvas, svg { max-width: 100%; }
-button, a, input, textarea, select { max-width: 100%; }
-
+html, body, #root { width:100%; min-width:0; min-height:100%; margin:0; padding:0; }
+html { min-height:100%; overflow-x:hidden; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+body { min-height:100dvh; overflow:hidden; overscroll-behavior:none; background:#f8fafc; }
+#root { min-height:100dvh; height:100dvh; overflow:hidden; }
+*, *::before, *::after { box-sizing:border-box; }
+img, video, canvas, svg { max-width:100%; }
+button, a, input, textarea, select { max-width:100%; }
 @layer utilities {
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  .safe-area-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+  .no-scrollbar::-webkit-scrollbar { display:none; }
+  .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+  .safe-area-bottom { padding-bottom:max(0.5rem, env(safe-area-inset-bottom)); }
 }
-
-.vidgrab-browser-main {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  padding: 0;
+.vidgrab-browser-main { width:100%; flex:1 1 auto; min-height:0; overflow:hidden; padding:0; }
+.vidgrab-browser-safe { width:100%; height:100%; min-height:0; padding:0; }
+@media (max-width:1024px) {
+  .vidgrab-app-header { display:block !important; flex:0 0 auto; }
+  .vidgrab-app-main { width:100%; flex:1 1 auto; height:auto; min-height:0; padding-bottom:104px; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
+  .vidgrab-screen { width:100%; max-width:none; margin:0; padding:12px; }
+  .vidgrab-browser-main { height:100%; flex:1 1 auto; min-height:0; padding:0; }
+  .vidgrab-browser-safe { height:100%; min-height:0; padding:0; }
+  .vidgrab-bottom-safe { padding-bottom:max(8px, env(safe-area-inset-bottom)); }
 }
-.vidgrab-browser-safe {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  padding: 0;
-}
-
-/* Android WebView can report a ~930px CSS viewport on a phone.
-   Do not use Tailwind's 768px md breakpoint to decide whether the app is mobile. */
-@media (max-width: 1024px) {
-  .vidgrab-app-header {
-    display: none !important;
-  }
-
-  .vidgrab-app-main {
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    padding-bottom: 104px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .vidgrab-screen {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 12px;
-  }
-
-  .vidgrab-browser-main {
-    height: 100%;
-    min-height: 0;
-    padding: 0;
-  }
-
-  .vidgrab-browser-safe {
-    height: 100%;
-    min-height: 0;
-    padding: 0;
-  }
-
-  .vidgrab-bottom-safe {
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-  }
-}
-
-@media (min-width: 1025px) {
-  .vidgrab-app-main {
-    min-height: 0;
-  }
-}
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 1, 1) forwards; }
-@keyframes splashProgress { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
+@media (min-width:1025px) { .vidgrab-app-main { min-height:0; } }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.animate-fadeIn { animation:fadeIn 0.2s cubic-bezier(0.16,1,1,1) forwards; }
+@keyframes splashProgress { from { transform:translateX(-100%); } to { transform:translateX(200%); } }
