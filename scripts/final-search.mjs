@@ -87,7 +87,7 @@ const searchMethod = `  static async getYouTubeSearchFromPublicApi(query: string
           const c = html[i];
           if (quote) {
             if (escaped) escaped = false;
-            else if (c === '\\') escaped = true;
+            else if (c.charCodeAt(0) === 92) escaped = true;
             else if (c === '"') quote = false;
             continue;
           }
