@@ -25,7 +25,8 @@ if(!text.includes('public boolean openBrowser(String url)'))throw new Error('Mis
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
 if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
 if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing browser GRAB control.');
-if(!text.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing native browser GRAB handoff.');
+if(!text.includes('notifyBrowserGrab(String url)'))throw new Error('Missing native browser GRAB handoff method.');
+if(!browserText.includes('main.notifyBrowserGrab(webView.getUrl())'))throw new Error('Missing browser GRAB click handoff.');
 if(!browserText.includes('webView.canGoBack()'))throw new Error('Native browser Back history handling missing.');
 if(!browserText.includes('setNestedScrollingEnabled(true)'))throw new Error('Native browser scrolling configuration missing.');
 if(!manifestText.includes('VidGrabBrowserActivity'))throw new Error('Native browser Activity is not declared in AndroidManifest.xml.');
