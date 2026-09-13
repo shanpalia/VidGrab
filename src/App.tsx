@@ -29,6 +29,7 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveNavTab>('home');
   const [browserUrl, setBrowserUrl] = useState('https://www.youtube.com/');
+  const [nativeBrowserOpen, setNativeBrowserOpen] = useState(false);
   const [currentMetadata, setCurrentMetadata] = useState<MediaMetadata | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<MediaFormat | null>(null);
   const [customTitle, setCustomTitle] = useState('');
@@ -51,7 +52,11 @@ export default function App() {
   useEffect(() => { refreshStorage(); void NativeStorage.ensureFolders(); }, []);
 
   useEffect(() => {
-    const onNativeBrowserClosed = () => { setActiveTab('home'); setErrorMessage(undefined); };
+    const onNativeBrowserClosed = () => {
+      setNativeBrowserOpen(false);
+      setActiveTab('home');
+      setErrorMessage(undefined);
+    };
     window.addEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
     return () => window.removeEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
   }, []);
@@ -85,24 +90,33 @@ export default function App() {
 
   const handleOpenBrowser = (url: string) => {
     setBrowserUrl(url);
-    setActiveTab('browser');
+    setErrorMessage(undefined);
     const openedNative = NativeStorage.openBrowser(url);
-    if (!openedNative) window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (openedNative) {
+      setNativeBrowserOpen(true);
+      setActiveTab('browser');
+      return;
+    }
+    setNativeBrowserOpen(false);
+    setActiveTab('browser');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   const handleStartDownload = (format: MediaFormat, title: string, location: string) => { setSelectedFormat(format); setCustomTitle(title); setDownloadLocation(location); setActiveTab('progress'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const handleBackToHome = () => { setActiveTab('home'); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handleBackToHome = () => { setNativeBrowserOpen(false); setActiveTab('home'); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const handleBackToResult = () => { setActiveTab('result'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const navigate = (tab: ActiveNavTab) => { setActiveTab(tab); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const navigate = (tab: ActiveNavTab) => { setNativeBrowserOpen(false); setActiveTab(tab); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   if (showSplash) return <SplashScreen onFinished={() => setShowSplash(false)} />;
   const isBrowser = activeTab === 'browser';
+  const showReactBrowser = isBrowser && !nativeBrowserOpen;
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 flex flex-col font-sans overflow-x-hidden">
       {!isBrowser && <Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}
       <main className={isBrowser ? 'flex-1 min-h-0 overflow-hidden vidgrab-browser-main' : 'flex-1 vidgrab-app-main'}>
         {activeTab === 'home' && <HomePage onOpenBrowser={handleOpenBrowser} onOpenDownloadPage={handleGrab} onOpenMoreSites={() => navigate('platforms')} />}
-        {activeTab === 'browser' && !NativeStorage.isAndroidBridgeAvailable && <InAppBrowser initialUrl={browserUrl} onClose={handleBackToHome} onOpenDownloadPage={(metadata) => { setCurrentMetadata(metadata); setCustomTitle(metadata.title); setActiveTab('result'); }} />}
+        {showReactBrowser && <InAppBrowser initialUrl={browserUrl} onClose={handleBackToHome} onOpenDownloadPage={(metadata) => { setCurrentMetadata(metadata); setCustomTitle(metadata.title); setActiveTab('result'); }} />}
         {activeTab === 'music' && <MusicPage onOpenDownloadPage={handleGrab} onOpenBrowser={handleOpenBrowser} />}
         {activeTab === 'video' && <VideoPage onOpenDownloadPage={handleGrab} onOpenBrowser={handleOpenBrowser} />}
         {activeTab === 'platforms' && <SupportedPlatformsPage onBack={handleBackToHome} onSelectSample={handleOpenBrowser} />}
