@@ -5,7 +5,7 @@ import { ActiveNavTab } from '../types';
 interface HeaderProps { activeTab: ActiveNavTab; onNavigate: (tab: ActiveNavTab) => void; filesCount: number; }
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, onNavigate, filesCount }) => (
-  <header className="vidgrab-app-header vidgrab-top-safe hidden md:block sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+  <header className="vidgrab-app-header vidgrab-top-safe sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
     <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2">
       <button id="vidgrab-logo-button" onClick={() => onNavigate('home')} className="flex min-w-0 items-center gap-2 text-left active:scale-95 transition-transform">
         <img src="/vidgrab-icon.png" alt="VidGrab" className="w-9 h-9 rounded-xl object-cover shrink-0" />
