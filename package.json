@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js android",
     "lint": "tsc --noEmit",
-    "android:prepare": "npm run build && rm -f dist/server.cjs dist/server.cjs.map && rm -rf android && npx cap add android && npx cap copy android && node scripts/patch-android.mjs && node scripts/final-native.mjs && node scripts/fix-edge-to-edge.mjs",
+    "android:prepare": "npm run build && rm -f dist/server.cjs dist/server.cjs.map && rm -rf android && npx cap add android && npx cap copy android && node scripts/patch-android.mjs && node scripts/native-browser.mjs && node scripts/final-native.mjs && node scripts/fix-edge-to-edge.mjs",
     "android:build": "npm run android:prepare && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
