@@ -33,6 +33,6 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "tsx": "^4.21.0",
-    "@types/node": "^22.14.0"
+    "@capacitor/cli": "^7.4.0"
   }
 }
