@@ -21,6 +21,12 @@ if (!text.includes('setDecorFitsSystemWindows(false)')) {
 if (text.includes('VIDGRAB_ANDROID_INSETS_V8')) {
   throw new Error('MainActivity.java still contains the obsolete WebView-level V8 inset patch.');
 }
+if (!text.includes('VIDGRAB_ANDROID_BACK_V1')) {
+  throw new Error('MainActivity.java is missing browser Back-button interception.');
+}
+if (!text.includes('VidGrabAndroidBack')) {
+  throw new Error('MainActivity.java is missing the React browser Back bridge call.');
+}
 
 let depth = 0;
 let inString = false;
@@ -41,4 +47,4 @@ for (let i = 0; i < text.length; i += 1) {
 }
 if (inString || inBlockComment || depth !== 0) throw new Error(`Generated MainActivity.java has unbalanced syntax (brace depth: ${depth}).`);
 
-console.log('VidGrab Android V9 native container safe-area and system-bar patch verified successfully.');
+console.log('VidGrab Android V9 native container, system-bar and browser Back patches verified successfully.');
