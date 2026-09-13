@@ -10,10 +10,8 @@ source = source.replace('VIDGRAB_ANDROID_SAFE_AREA_V8', 'VIDGRAB_ANDROID_SAFE_AR
 source = source.replace('VIDGRAB_ANDROID_SAFE_AREA_V7', 'VIDGRAB_ANDROID_SAFE_AREA_V9');
 source = source.replace('getWindow().setDecorFitsSystemWindows(true);', 'getWindow().setDecorFitsSystemWindows(false);');
 
-// Android 15 enforces edge-to-edge. Do not pad the WebView itself because its
-// background can still paint behind the status bar. Instead, inset the native
-// container that owns the WebView so the entire HTML app starts below the
-// status bar/display cutout and ends above the navigation bar.
+// Android 15 enforces edge-to-edge. Inset the native WebView container rather
+// than the WebView itself so the HTML app starts below the status/cutout area.
 source = source.replace('        if (bridge != null && bridge.getWebView() != null) {\n            bridge.getWebView().setPadding(0, 0, 0, 0);', `        if (bridge != null && bridge.getWebView() != null) {
             bridge.getWebView().setPadding(0, 0, 0, 0);
 
@@ -53,8 +51,6 @@ source = source.replace('        if (bridge != null && bridge.getWebView() != nu
                 container.requestApplyInsets();
             }`);
 
-// Remove any older WebView-level inset block if a generated template ever
-// contains one. The native parent container above is the single source of truth.
 source = source.replace(/\n\s*\/\/ VIDGRAB_ANDROID_INSETS_V8:[\s\S]*?bridge\.getWebView\(\)\.requestApplyInsets\(\);/, '');
 source = source.replace(/\n\s*\/\/ VIDGRAB_ANDROID_INSETS_V9:[\s\S]*?bridge\.getWebView\(\)\.requestApplyInsets\(\);/, '');
 
@@ -76,5 +72,25 @@ if (!source.includes('getClipboardText()')) {
   source = source.replace(anchor, method + anchor);
 }
 
+// Android system Back must navigate VidGrab's React browser first instead of
+// immediately finishing the Activity. InAppBrowser registers this JS handler.
+if (!source.includes('VIDGRAB_ANDROID_BACK_V1')) {
+  const anchor = 'public class MainActivity extends BridgeActivity {';
+  const method = `public class MainActivity extends BridgeActivity {
+    // VIDGRAB_ANDROID_BACK_V1
+    @Override
+    public void onBackPressed() {
+        if (bridge != null && bridge.getWebView() != null) {
+            bridge.getWebView().evaluateJavascript(
+                "(function(){if(window.VidGrabAndroidBack){window.VidGrabAndroidBack();return 'handled';}return 'none';})()",
+                value -> {}
+            );
+            return;
+        }
+        super.onBackPressed();
+    }`;
+  source = source.replace(anchor, method);
+}
+
 fs.writeFileSync(file, source);
-console.log('[native] VidGrab Android V9: native container is inset below status/cutout and above navigation bar');
+console.log('[native] VidGrab Android V9 safe area + browser back interception applied');
