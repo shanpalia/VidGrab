@@ -33,7 +33,7 @@ if(!mainClass.includes('void onWindowFocusChanged(boolean hasFocus)'))throw new 
 
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
 if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
-if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V2') && !browserText.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing browser GRAB control.');
+if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V2') && !browserText.includes('VIDGRAB_NATIVE_GRAB_V1') && !browserText.includes('VIDGRAB_NATIVE_GRAB_V3'))throw new Error('Missing browser GRAB control.');
 if(!browserText.includes('showGrabDialog('))throw new Error('Missing native GRAB dialog implementation.');
 if(!text.includes('notifyBrowserGrab(String url)'))throw new Error('Missing native browser GRAB handoff method.');
 if(!text.includes('notifyBrowserNavigate(String tab)'))throw new Error('Missing native browser navigation handoff method.');
@@ -41,6 +41,8 @@ const hasGrabHandoff = browserText.includes('main.notifyBrowserGrab(webView.getU
 if(!hasGrabHandoff)throw new Error('Missing browser GRAB click handoff.');
 if(!browserText.includes('BrowserMediaBridge'))throw new Error('Missing automatic video-play GRAB bridge.');
 if(!browserText.includes('installMediaGrabHook()'))throw new Error('Missing automatic media-play hook.');
+if(!browserText.includes('isVideoPageUrl('))throw new Error('Missing selected-video URL guard.');
+if(!browserText.includes('if (!isVideoPageUrl(current)) return;'))throw new Error('Auto-GRAB is not restricted to selected video pages.');
 if(!browserText.includes('VIDGRAB_NATIVE_BOTTOM_NAV_V2') && !browserText.includes('VIDGRAB_NATIVE_BOTTOM_NAV_V1'))throw new Error('Missing native browser bottom navigation.');
 if(!browserText.includes('hideVidGrabSystemNavigation()'))throw new Error('Browser Android system navigation is not hidden.');
 if(!browserText.includes('webView.canGoBack()'))throw new Error('Native browser Back history handling missing.');
@@ -65,4 +67,4 @@ function verifyJava(text,name){
 
 verifyJava(text,'Generated MainActivity.java');
 verifyJava(browserText,'Generated VidGrabBrowserActivity.java');
-console.log('VidGrab Android V9 safe-area, hidden system navigation, public native browser, persistent browser navigation, auto-GRAB and predictive Back patches verified successfully.');
+console.log('VidGrab Android V9 safe-area, hidden system navigation, public native browser, persistent browser navigation, selected-video-only auto-GRAB and predictive Back patches verified successfully.');
