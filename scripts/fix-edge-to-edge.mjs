@@ -6,14 +6,17 @@ if (!fs.existsSync(mainActivity)) throw new Error('MainActivity.java not found')
 
 const text = fs.readFileSync(mainActivity, 'utf8');
 
-if (!text.includes('VIDGRAB_ANDROID_SAFE_AREA_V7')) {
-  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_SAFE_AREA_V7 safe-area patch.');
+if (!text.includes('VIDGRAB_ANDROID_SAFE_AREA_V8')) {
+  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_SAFE_AREA_V8 safe-area patch.');
 }
-if (!text.includes('VIDGRAB_ANDROID_INSETS_V7')) {
-  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_INSETS_V7 WindowInsets patch.');
+if (!text.includes('VIDGRAB_ANDROID_INSETS_V8')) {
+  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_INSETS_V8 WindowInsets patch.');
+}
+if (!text.includes('VIDGRAB_ANDROID_SYSTEM_BARS_V8')) {
+  throw new Error('MainActivity.java is missing the V8 system-bar appearance patch.');
 }
 if (!text.includes('setDecorFitsSystemWindows(false)')) {
-  throw new Error('MainActivity.java is missing the V7 edge-to-edge window configuration.');
+  throw new Error('MainActivity.java is missing the V8 edge-to-edge window configuration.');
 }
 
 let depth = 0;
@@ -35,4 +38,4 @@ for (let i = 0; i < text.length; i += 1) {
 }
 if (inString || inBlockComment || depth !== 0) throw new Error(`Generated MainActivity.java has unbalanced syntax (brace depth: ${depth}).`);
 
-console.log('VidGrab Android V7 safe-area and WindowInsets patch verified successfully.');
+console.log('VidGrab Android V8 system-bar and WindowInsets patch verified successfully.');
