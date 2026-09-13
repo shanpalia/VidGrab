@@ -1,5 +1,5 @@
 /*
- * Native Android storage/player bridge for VidGrab.
+ * Native Android storage/player/browser bridge for VidGrab.
  *
  * Android builds expose window.VidGrabNative from the generated MainActivity.
  * Browser builds continue to use the existing IndexedDB/browser fallback.
@@ -16,6 +16,7 @@ declare global {
       isVibePlayerInstalled: () => boolean;
       getDownloadRoot: () => string;
       ensureFolders: () => boolean;
+      openBrowser: (url: string) => boolean;
     };
   }
 }
@@ -79,15 +80,22 @@ export class NativeStorage {
     }
   }
 
+  static openBrowser(url: string): boolean {
+    if (!this.isAndroidBridgeAvailable || !window.VidGrabNative) return false;
+    try {
+      return !!window.VidGrabNative.openBrowser(url);
+    } catch {
+      return false;
+    }
+  }
+
   static async saveBlob(blob: Blob, fileName: string, category: string, ext: string): Promise<NativeSaveResult | null> {
     if (!this.isAndroidBridgeAvailable || !window.VidGrabNative) return null;
-
     const bytes = new Uint8Array(await blob.arrayBuffer());
     const base64 = toBase64(bytes);
     const mimeType = blob.type || mimeFor(ext, category);
     const uri = window.VidGrabNative.saveFile(category, fileName, mimeType, base64);
     if (!uri) throw new Error('Android could not save the downloaded file.');
-
     const root = window.VidGrabNative.getDownloadRoot();
     return { uri, location: `${root}/${category}` };
   }
@@ -99,14 +107,10 @@ export class NativeStorage {
 
   static open(uri: string | undefined, mimeType: string): boolean {
     if (!uri || !this.isAndroidBridgeAvailable || !window.VidGrabNative) return false;
-
-    // For video/audio, the existing "Play with Vibe Player" menu now gets
-    // a direct Vibe Player launch rather than an Android chooser.
     if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) {
       if (!this.isVibePlayerInstalled()) return false;
       return this.openWithVibePlayer(uri, mimeType);
     }
-
     return !!window.VidGrabNative.openFile(uri, mimeType);
   }
 
