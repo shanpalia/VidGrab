@@ -25,12 +25,12 @@ source=source.replace('        if (bridge != null && bridge.getWebView() != null
                 final android.view.ViewGroup container=(android.view.ViewGroup)parent;
                 container.setBackgroundColor(Color.rgb(248,250,252));
                 container.setOnApplyWindowInsetsListener((view,insets)->{
-                    int top,bottom;
+                    int top;
                     if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.R){
-                        android.graphics.Insets bars=insets.getInsets(android.view.WindowInsets.Type.statusBars()|android.view.WindowInsets.Type.displayCutout()|android.view.WindowInsets.Type.navigationBars());
-                        top=bars.top;bottom=bars.bottom;
-                    }else{top=insets.getSystemWindowInsetTop();bottom=insets.getSystemWindowInsetBottom();}
-                    view.setPadding(0,top,0,bottom);return insets;
+                        android.graphics.Insets bars=insets.getInsets(android.view.WindowInsets.Type.statusBars()|android.view.WindowInsets.Type.displayCutout());
+                        top=bars.top;
+                    }else{top=insets.getSystemWindowInsetTop();}
+                    view.setPadding(0,top,0,0);return insets;
                 });
                 container.requestApplyInsets();
             }`);
@@ -53,8 +53,6 @@ if(!source.includes('getClipboardText()')){
 `;
  source=source.replace(anchor,method+anchor);
 }
-
-// Predictive/system Back is routed through the React browser first.
 if(!source.includes('VIDGRAB_ANDROID_BACK_V2')){
  source=source.replace('import com.getcapacitor.BridgeActivity;','import com.getcapacitor.BridgeActivity;\nimport androidx.activity.OnBackPressedCallback;');
  const anchor='        super.onCreate(savedInstanceState);';
