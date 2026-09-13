@@ -4,10 +4,12 @@ import path from 'node:path';
 const file=path.join(process.cwd(),'android','app','src','main','java','com','shanpalia','vidgrab','MainActivity.java');
 if(!fs.existsSync(file))throw new Error('MainActivity.java not found');
 let source=fs.readFileSync(file,'utf8');
+
 source=source.replace('VIDGRAB_ANDROID_SAFE_AREA_V5','VIDGRAB_ANDROID_SAFE_AREA_V9');
 source=source.replace('VIDGRAB_ANDROID_SAFE_AREA_V8','VIDGRAB_ANDROID_SAFE_AREA_V9');
 source=source.replace('VIDGRAB_ANDROID_SAFE_AREA_V7','VIDGRAB_ANDROID_SAFE_AREA_V9');
 source=source.replace('getWindow().setDecorFitsSystemWindows(true);','getWindow().setDecorFitsSystemWindows(false);');
+
 source=source.replace('        if (bridge != null && bridge.getWebView() != null) {\n            bridge.getWebView().setPadding(0, 0, 0, 0);',`        if (bridge != null && bridge.getWebView() != null) {
             bridge.getWebView().setPadding(0, 0, 0, 0);
 
@@ -34,11 +36,13 @@ source=source.replace('        if (bridge != null && bridge.getWebView() != null
                 });
                 container.requestApplyInsets();
             }`);
+
 source=source.replace(/\n\s*\/\/ VIDGRAB_ANDROID_INSETS_V8:[\s\S]*?bridge\.getWebView\(\)\.requestApplyInsets\(\);/,'');
 source=source.replace(/\n\s*\/\/ VIDGRAB_ANDROID_INSETS_V9:[\s\S]*?bridge\.getWebView\(\)\.requestApplyInsets\(\);/,'');
+
 if(!source.includes('getClipboardText()')){
- const anchor='    @JavascriptInterface\n    public String getDownloadRoot()';
- const method=`    @JavascriptInterface
+  const anchor='    @JavascriptInterface\n    public String getDownloadRoot()';
+  const method=`    @JavascriptInterface
     public String getClipboardText() {
         try {
             android.content.ClipboardManager cm=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
@@ -51,12 +55,13 @@ if(!source.includes('getClipboardText()')){
     }
 
 `;
- source=source.replace(anchor,method+anchor);
+  source=source.replace(anchor,method+anchor);
 }
+
 if(!source.includes('VIDGRAB_ANDROID_BACK_V2')){
- source=source.replace('import com.getcapacitor.BridgeActivity;','import com.getcapacitor.BridgeActivity;\nimport androidx.activity.OnBackPressedCallback;');
- const anchor='        super.onCreate(savedInstanceState);';
- const code=`        super.onCreate(savedInstanceState);
+  source=source.replace('import com.getcapacitor.BridgeActivity;','import com.getcapacitor.BridgeActivity;\nimport androidx.activity.OnBackPressedCallback;');
+  const anchor='        super.onCreate(savedInstanceState);';
+  const code=`        super.onCreate(savedInstanceState);
 
         // VIDGRAB_ANDROID_BACK_V2
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -72,22 +77,57 @@ if(!source.includes('VIDGRAB_ANDROID_BACK_V2')){
                 }
             }
         });`;
- source=source.replace(anchor,code);
+  source=source.replace(anchor,code);
 }
 
-// Keep Android's system navigation controls out of the app so VidGrab's own
-// bottom navigation occupies the bottom edge. Android can still reveal the
-// system controls transiently with the system gesture when required.
+// IMPORTANT: MainActivity.java also contains the package-private VidGrabNative
+// helper class. Do not append Activity methods at the last file brace, because
+// that would put getWindow()/onWindowFocusChanged() inside VidGrabNative.
 if(!source.includes('VIDGRAB_SYSTEM_NAV_HIDDEN_V1')){
- source=source.replace('public class MainActivity extends BridgeActivity {','public class MainActivity extends BridgeActivity {\n    // VIDGRAB_SYSTEM_NAV_HIDDEN_V1');
- const hide=`\n    private void hideVidGrabSystemNavigation() {\n        try {\n            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n                android.view.WindowInsetsController controller = getWindow().getInsetsController();\n                if (controller != null) {\n                    controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);\n                    controller.hide(android.view.WindowInsets.Type.navigationBars());\n                }\n            } else {\n                getWindow().getDecorView().setSystemUiVisibility(\n                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |\n                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |\n                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |\n                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |\n                    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR\n                );\n            }\n        } catch (Exception ignored) {}\n    }\n`;
- source=source.slice(0,source.lastIndexOf('\n}'))+hide+'\n}\n';
+  source=source.replace('public class MainActivity extends BridgeActivity {','public class MainActivity extends BridgeActivity {\n    // VIDGRAB_SYSTEM_NAV_HIDDEN_V1');
+  const hide=`
+    private void hideVidGrabSystemNavigation() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.view.WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                    controller.hide(android.view.WindowInsets.Type.navigationBars());
+                }
+            } else {
+                getWindow().getDecorView().setSystemUiVisibility(
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                );
+            }
+        } catch (Exception ignored) {}
+    }
+`;
+  const mainClose='\n}\n\nclass VidGrabNative';
+  const mainCloseIndex=source.indexOf(mainClose);
+  if(mainCloseIndex<0)throw new Error('MainActivity class boundary not found');
+  source=source.slice(0,mainCloseIndex)+hide+source.slice(mainCloseIndex);
 }
+
 if(!source.includes('hideVidGrabSystemNavigation();')){
- source=source.replace('super.onCreate(savedInstanceState);','super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();',1);
+  source=source.replace('        super.onCreate(savedInstanceState);','        super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();',1);
 }
+
 if(!source.includes('void onWindowFocusChanged(boolean hasFocus)')){
- source=source.slice(0,source.lastIndexOf('\n}'))+`\n    @Override public void onWindowFocusChanged(boolean hasFocus) {\n        super.onWindowFocusChanged(hasFocus);\n        if (hasFocus) hideVidGrabSystemNavigation();\n    }\n`+'\n}\n';
+  const focus=`
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideVidGrabSystemNavigation();
+    }
+`;
+  const mainClose='\n}\n\nclass VidGrabNative';
+  const mainCloseIndex=source.indexOf(mainClose);
+  if(mainCloseIndex<0)throw new Error('MainActivity class boundary not found for focus callback');
+  source=source.slice(0,mainCloseIndex)+focus+source.slice(mainCloseIndex);
 }
+
 fs.writeFileSync(file,source);
-console.log('[native] VidGrab V9 safe area + predictive browser back + hidden Android system navigation applied');
+console.log('[native] VidGrab V9 safe area + predictive browser back + hidden Android system navigation applied to MainActivity');
