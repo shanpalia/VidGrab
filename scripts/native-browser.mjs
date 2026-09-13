@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const file = path.join(process.cwd(), 'android', 'app', 'src', 'main', 'java', 'com', 'shanpalia', 'vidgrab', 'MainActivity.java');
+const androidRoot = path.join(process.cwd(), 'android');
+const file = path.join(androidRoot, 'app', 'src', 'main', 'java', 'com', 'shanpalia', 'vidgrab', 'MainActivity.java');
 let source = fs.readFileSync(file, 'utf8');
 
 if (!source.includes('VIDGRAB_NATIVE_BROWSER_V1')) {
@@ -26,7 +27,7 @@ class VidGrabBrowserActivity extends android.app.Activity {
         TextView v = new TextView(this); v.setText(label); v.setTextSize(13); v.setTextColor(android.graphics.Color.DKGRAY);
         v.setGravity(Gravity.CENTER); v.setPadding(dp(8), 0, dp(8), 0); return v;
     }
-    private android.graphics.drawable.GradientDrawable rounded(int color) {
+    private GradientDrawable rounded(int color) {
         GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(24)); return d;
     }
 
@@ -76,5 +77,15 @@ class VidGrabBrowserActivity extends android.app.Activity {
 }
 `;
 }
+
+const manifest = path.join(androidRoot, 'app', 'src', 'main', 'AndroidManifest.xml');
+if (fs.existsSync(manifest)) {
+  let text = fs.readFileSync(manifest, 'utf8');
+  if (!text.includes('VidGrabBrowserActivity')) {
+    text = text.replace('</application>', '        <activity android:name=".VidGrabBrowserActivity" android:exported="false" android:screenOrientation="unspecified" />\n    </application>');
+    fs.writeFileSync(manifest, text);
+  }
+}
+
 fs.writeFileSync(file, source);
-console.log('[native-browser] real Android WebView browser patched');
+console.log('[native-browser] real Android WebView browser patched and declared');
