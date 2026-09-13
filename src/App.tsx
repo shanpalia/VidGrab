@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { BottomNav } from './components/BottomNav';
@@ -43,6 +43,7 @@ export default function App() {
   const [activeImageViewerFile, setActiveImageViewerFile] = useState<DownloadedFile | null>(null);
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
   const [grabUrl, setGrabUrl] = useState<string | null>(null);
+  const nativeNavigationHandoff = useRef(false);
 
   const refreshStorage = () => { setFiles(StorageService.getFiles()); setHistory(StorageService.getHistory()); };
   const handlePlayFile = (file: DownloadedFile) => {
@@ -55,6 +56,10 @@ export default function App() {
   useEffect(() => {
     const onNativeBrowserClosed = () => {
       setNativeBrowserOpen(false);
+      if (nativeNavigationHandoff.current) {
+        nativeNavigationHandoff.current = false;
+        return;
+      }
       setActiveTab('home');
       setErrorMessage(undefined);
     };
@@ -62,6 +67,7 @@ export default function App() {
       const tab = String((event as CustomEvent<{tab?: string}>).detail?.tab || 'home');
       const allowed: ActiveNavTab[] = ['home', 'music', 'video', 'files', 'me'];
       if (!allowed.includes(tab as ActiveNavTab)) return;
+      nativeNavigationHandoff.current = true;
       setNativeBrowserOpen(false);
       setActiveTab(tab as ActiveNavTab);
       setErrorMessage(undefined);
