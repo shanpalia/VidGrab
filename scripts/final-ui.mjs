@@ -12,15 +12,19 @@ if (start >= 0 && end > start) {
 } else {
   console.log('[ui] Home branding header already removed/not found');
 }
-fs.writeFileSync(homePath, home);
 
+// Do not hide the app Header on mobile. The Android native layer is responsible
+// for status-bar/cutout insets, while the Header remains visible above app content.
 const appPath = 'src/App.tsx';
 let app = fs.readFileSync(appPath, 'utf8');
-// The HomePage is the actual mobile app header/search surface. The separate
-// desktop Header must never consume Android status-bar space or overlay the
-// phone punch-hole area. Keep it only on wide screens through CSS.
-app = app.replace("{!isBrowser && <Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}", "{!isBrowser && <div className=\"hidden md:block\"><Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} /></div>}");
-// Keep one VidGrab bottom navigation on app screens; browser has its own
-// toolbar and must not render a second bottom navigation.
+app = app.replace(
+  "{!isBrowser && <div className=\"hidden md:block\"><Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} /></div>}",
+  "{!isBrowser && <Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}"
+);
+app = app.replace(
+  "{!isBrowser && <Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}",
+  "{!isBrowser && <Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}"
+);
+
 fs.writeFileSync(appPath, app);
-console.log('[ui] final mobile header/navigation rules applied');
+console.log('[ui] mobile app header kept visible; browser keeps its own toolbar');
