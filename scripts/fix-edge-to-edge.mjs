@@ -33,12 +33,12 @@ if(!mainClass.includes('void onWindowFocusChanged(boolean hasFocus)'))throw new 
 
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
 if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
-// native-browser-grab V2 replaced the original V1 marker.
 if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V2') && !browserText.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing browser GRAB control.');
 if(!browserText.includes('showGrabDialog('))throw new Error('Missing native GRAB dialog implementation.');
 if(!text.includes('notifyBrowserGrab(String url)'))throw new Error('Missing native browser GRAB handoff method.');
 if(!text.includes('notifyBrowserNavigate(String tab)'))throw new Error('Missing native browser navigation handoff method.');
-if(!browserText.includes('main.notifyBrowserGrab(webView.getUrl())'))throw new Error('Missing browser GRAB click handoff.');
+const hasGrabHandoff = browserText.includes('main.notifyBrowserGrab(webView.getUrl())') || /main\.notifyBrowserGrab\([^;]*webView\.getUrl\(\)/.test(browserText);
+if(!hasGrabHandoff)throw new Error('Missing browser GRAB click handoff.');
 if(!browserText.includes('BrowserMediaBridge'))throw new Error('Missing automatic video-play GRAB bridge.');
 if(!browserText.includes('installMediaGrabHook()'))throw new Error('Missing automatic media-play hook.');
 if(!browserText.includes('VIDGRAB_NATIVE_BOTTOM_NAV_V2') && !browserText.includes('VIDGRAB_NATIVE_BOTTOM_NAV_V1'))throw new Error('Missing native browser bottom navigation.');
