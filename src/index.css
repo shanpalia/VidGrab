@@ -29,7 +29,7 @@ button, a, input, textarea, select { max-width: 100%; }
 }
 
 /* Android WebView can report a ~930px CSS viewport on a phone.
-   Use a real device-width breakpoint instead of Tailwind md (768px). */
+   Do not use Tailwind's 768px md breakpoint to decide whether the app is mobile. */
 @media (max-width: 1024px) {
   .vidgrab-app-header {
     display: none !important;
@@ -76,5 +76,5 @@ button, a, input, textarea, select { max-width: 100%; }
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 1) forwards; }
+.animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 1, 1) forwards; }
 @keyframes splashProgress { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
