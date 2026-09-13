@@ -50,7 +50,6 @@ export default function App() {
 
   useEffect(() => { refreshStorage(); void NativeStorage.ensureFolders(); }, []);
 
-  // VidMate-style foreground clipboard detection. Only supported public media URLs trigger the dialog.
   useEffect(() => {
     if (showSplash) return;
     let cancelled = false;
@@ -109,8 +108,7 @@ export default function App() {
       {activePlaybackFile && isPlayerMaximized && activePlaybackFile.type === 'audio' && <VidGrabAudioPlayer file={activePlaybackFile} onClose={() => setActivePlaybackFile(null)} onMinimize={() => setIsPlayerMaximized(false)} onFileUpdated={refreshStorage} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActivePlaybackFile(null); }} />}
       {activeImageViewerFile && <VidGrabImageViewer file={activeImageViewerFile} onClose={() => setActiveImageViewerFile(null)} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActiveImageViewerFile(null); }} />}
 
-      {/* Exactly one bottom navigation: VidGrab's app navigation. */}
-      <BottomNav activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />
+      {!isBrowser && <BottomNav activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}
 
       {clipboardUrl && (
         <div className="fixed inset-0 z-[200] bg-black/55 flex items-center justify-center p-5">
