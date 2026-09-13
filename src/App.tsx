@@ -42,6 +42,7 @@ export default function App() {
   const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(true);
   const [activeImageViewerFile, setActiveImageViewerFile] = useState<DownloadedFile | null>(null);
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
+  const [grabUrl, setGrabUrl] = useState<string | null>(null);
 
   const refreshStorage = () => { setFiles(StorageService.getFiles()); setHistory(StorageService.getHistory()); };
   const handlePlayFile = (file: DownloadedFile) => {
@@ -62,12 +63,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const onNativeGrab = async (event: Event) => {
+    const onNativeGrab = (event: Event) => {
       const url = String((event as CustomEvent<{url?: string}>).detail?.url || '').trim();
       if (!url) return;
       setNativeBrowserOpen(false);
       setErrorMessage(undefined);
-      await handleGrab(url);
+      setActiveTab('home');
+      setGrabUrl(url);
     };
     window.addEventListener('vidgrab-native-grab', onNativeGrab);
     return () => window.removeEventListener('vidgrab-native-grab', onNativeGrab);
@@ -151,6 +153,23 @@ export default function App() {
             <div className="px-6 py-4 flex items-center justify-end gap-7 border-t border-gray-100">
               <button onClick={() => setClipboardUrl(null)} className="font-bold text-gray-500">LATER</button>
               <button onClick={async () => { const url = clipboardUrl; setClipboardUrl(null); await handleGrab(url); }} className="font-bold text-sky-600">GO</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {grabUrl && (
+        <div className="fixed inset-0 z-[210] bg-black/55 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-2xl font-black">↓</div>
+                <div><h2 className="text-xl font-black text-gray-900">Grab this media?</h2><p className="text-sm text-gray-500 mt-0.5">Ready to download from this page</p></div>
+              </div>
+              <div className="mt-4 rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-600 break-all line-clamp-3">{grabUrl}</div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button onClick={() => setGrabUrl(null)} className="flex-1 rounded-xl bg-gray-100 py-3.5 font-bold text-gray-600">CANCEL</button>
+              <button onClick={async () => { const url=grabUrl; setGrabUrl(null); if(url) await handleGrab(url); }} className="flex-1 rounded-xl bg-red-600 py-3.5 font-black text-white shadow-lg">GRAB</button>
             </div>
           </div>
         </div>
