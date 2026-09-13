@@ -29,6 +29,9 @@ const extractVideoId = (url: string) => {
   } catch {}
   return '';
 };
+const getYoutubeQuery = (url: string) => {
+  try { return new URL(url).searchParams.get('search_query') || ''; } catch { return ''; }
+};
 const isYoutubeSearch = (url: string) => isYoutubeUrl(url) && /[?&]search_query=/i.test(url);
 
 export const InAppBrowser: React.FC<InAppBrowserProps> = ({ initialUrl, onClose, onOpenDownloadPage }) => {
@@ -42,6 +45,8 @@ export const InAppBrowser: React.FC<InAppBrowserProps> = ({ initialUrl, onClose,
   const [blocked, setBlocked] = useState(false);
   const [detectedMedia, setDetectedMedia] = useState<MediaMetadata | null>(null);
   const [grabbing, setGrabbing] = useState(false);
+  const [youtubeResults, setYoutubeResults] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState(getYoutubeQuery(first));
 
   const activeUrl = history[historyIndex] || first;
   const youtube = isYoutubeUrl(activeUrl);
@@ -60,10 +65,17 @@ export const InAppBrowser: React.FC<InAppBrowserProps> = ({ initialUrl, onClose,
 
   useEffect(() => {
     setInputUrl(activeUrl);
+    setSearchText(getYoutubeQuery(activeUrl));
     setBlocked(false);
     setDetectedMedia(null);
+    setYoutubeResults([]);
     let cancelled = false;
-    if (youtubeWatch) {
+    if (youtubeSearch) {
+      const q = getYoutubeQuery(activeUrl);
+      if (!q) return;
+      setLoading(true);
+      ApiService.getYouTubeSearch(q).then((items) => { if (!cancelled) setYoutubeResults(Array.isArray(items) ? items : []); }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    } else if (youtubeWatch) {
       setLoading(true);
       ApiService.getMetadata(activeUrl).then((meta) => { if (!cancelled) setDetectedMedia(meta); }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
     } else if (!youtube) {
@@ -73,14 +85,30 @@ export const InAppBrowser: React.FC<InAppBrowserProps> = ({ initialUrl, onClose,
       setLoading(false);
     }
     return () => { cancelled = true; };
-  }, [activeUrl, youtube, youtubeWatch]);
+  }, [activeUrl, youtube, youtubeSearch, youtubeWatch]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (historyIndex > 0) setHistoryIndex((i) => i - 1);
+      else onClose();
+    };
+    (window as any).VidGrabAndroidBack = handler;
+    window.addEventListener('vidgrab-android-back', handler);
+    return () => {
+      delete (window as any).VidGrabAndroidBack;
+      window.removeEventListener('vidgrab-android-back', handler);
+    };
+  }, [historyIndex, onClose]);
 
   const runSearch = (query: string) => {
     const q = query.trim();
     if (!q) return;
-    // Do not call a CORS-sensitive public API. The real YouTube search page is
-    // loaded inside the app browser, so its results come directly from YouTube.
     navigateTo(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`);
+  };
+
+  const openYoutubeResult = (item: any) => {
+    const url = item?.url || item?.videoUrl || (item?.id ? `https://www.youtube.com/watch?v=${item.id}` : '');
+    if (url) navigateTo(url);
   };
 
   const triggerGrab = async () => {
@@ -99,11 +127,13 @@ export const InAppBrowser: React.FC<InAppBrowserProps> = ({ initialUrl, onClose,
   const copyUrl = async () => { try { await navigator.clipboard.writeText(activeUrl); showToast('URL copied'); } catch { showToast('Could not copy URL'); } setMenuOpen(false); };
   const shareUrl = async () => { try { if (navigator.share) await navigator.share({ title: 'VidGrab', url: activeUrl }); else await navigator.clipboard.writeText(activeUrl); } catch {} setMenuOpen(false); };
 
+  const youtubeEmbedUrl = youtubeWatch ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1` : '';
+
   return (
     <div className="vidgrab-browser-safe flex flex-col w-full h-full min-h-0 bg-white overflow-hidden relative">
       {toast && <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[100] rounded-full bg-gray-900 text-white px-4 py-2 text-xs font-bold shadow-xl">{toast}</div>}
       <div className="shrink-0 bg-white border-b border-gray-200 px-2 py-2 flex items-center gap-1.5 shadow-sm">
-        <button onClick={() => historyIndex > 0 && setHistoryIndex((i) => i - 1)} disabled={historyIndex === 0} className="p-2 rounded-full disabled:text-gray-300 text-gray-800"><ArrowLeft className="w-5 h-5" /></button>
+        <button onClick={() => historyIndex > 0 ? setHistoryIndex((i) => i - 1) : onClose()} className="p-2 rounded-full text-gray-800"><ArrowLeft className="w-5 h-5" /></button>
         <button onClick={() => historyIndex < history.length - 1 && setHistoryIndex((i) => i + 1)} disabled={historyIndex >= history.length - 1} className="p-2 rounded-full disabled:text-gray-300 text-gray-800"><ArrowRight className="w-5 h-5" /></button>
         <button onClick={() => { setLoading(true); window.setTimeout(() => setLoading(false), 300); }} className="p-2 rounded-full text-gray-800"><RotateCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} /></button>
         <form onSubmit={(e) => { e.preventDefault(); navigateTo(inputUrl); }} className="flex-1 min-w-0">
@@ -117,14 +147,36 @@ export const InAppBrowser: React.FC<InAppBrowserProps> = ({ initialUrl, onClose,
       </div>
       {loading && <div className="h-0.5 shrink-0 bg-red-500 animate-pulse" />}
 
-      <div className="flex-1 min-h-0 overflow-hidden bg-white relative">
-        {blocked ? (
-          <div className="h-full flex flex-col items-center justify-center p-6 text-center"><Globe className="w-12 h-12 text-gray-300" /><h2 className="mt-4 font-black">This site blocks embedded pages</h2><p className="mt-2 text-sm text-gray-500">The site's security policy does not allow it to be embedded inside VidGrab.</p><button onClick={() => window.open(activeUrl, '_blank', 'noopener,noreferrer')} className="mt-5 px-5 py-3 rounded-full bg-red-600 text-white font-bold">Open site</button></div>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white relative">
+        {youtubeSearch ? (
+          <div className="min-h-full bg-slate-50 p-3 pb-8">
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-white rounded-2xl border shadow-sm p-3 mb-3 sticky top-0 z-20">
+                <form onSubmit={(e) => { e.preventDefault(); runSearch(searchText); }} className="flex gap-2 items-center">
+                  <Search className="w-5 h-5 text-gray-500 shrink-0" />
+                  <input value={searchText} onChange={(e) => setSearchText(e.target.value)} className="flex-1 min-w-0 outline-none text-base" placeholder="Search YouTube" />
+                  <button className="rounded-full bg-red-600 text-white px-4 py-2 font-bold text-sm">Search</button>
+                </form>
+              </div>
+              {youtubeResults.length ? youtubeResults.map((item, index) => (
+                <button key={`${item?.id || item?.url || 'result'}-${index}`} onClick={() => openYoutubeResult(item)} className="w-full text-left bg-white rounded-2xl border shadow-sm mb-3 overflow-hidden flex gap-3 p-2 hover:bg-gray-50">
+                  <div className="w-36 sm:w-48 aspect-video rounded-xl overflow-hidden bg-gray-100 shrink-0"><img src={item?.thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" /></div>
+                  <div className="py-1 min-w-0"><h3 className="font-black text-gray-900 line-clamp-2">{item?.title || 'YouTube Video'}</h3><p className="text-sm text-gray-500 mt-1">{item?.channel || 'YouTube'}</p><p className="text-xs text-gray-400 mt-1">{item?.views || ''} {item?.duration ? `• ${item.duration}` : ''}</p><span className="inline-flex items-center gap-1 mt-3 text-red-600 text-xs font-black"><Play className="w-3.5 h-3.5" />OPEN</span></div>
+                </button>
+              )) : !loading ? <div className="rounded-2xl bg-white border p-8 text-center text-gray-500">No YouTube results found. Try another search.</div> : <div className="py-12 text-center text-gray-500">Loading YouTube results…</div>}
+            </div>
+          </div>
+        ) : youtubeWatch ? (
+          <div className="w-full min-h-full bg-black flex flex-col">
+            <div className="w-full aspect-video shrink-0 bg-black"><iframe src={youtubeEmbedUrl} title="YouTube video" className="w-full h-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div>
+            <div className="bg-white p-4 min-h-32"><h2 className="font-black text-lg">YouTube video</h2><p className="text-sm text-gray-500 mt-1">Use GRAB to download this public video.</p></div>
+          </div>
+        ) : blocked ? (
+          <div className="h-full min-h-[60vh] flex flex-col items-center justify-center p-6 text-center"><Globe className="w-12 h-12 text-gray-300" /><h2 className="mt-4 font-black">This site blocks embedded pages</h2><p className="mt-2 text-sm text-gray-500">The site's security policy does not allow it to be embedded inside VidGrab.</p><button onClick={() => window.open(activeUrl, '_blank', 'noopener,noreferrer')} className="mt-5 px-5 py-3 rounded-full bg-red-600 text-white font-bold">Open site</button></div>
         ) : (
-          <iframe src={activeUrl} title="VidGrab Browser" className="w-full h-full border-0 bg-white" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" />
+          <iframe src={activeUrl} title="VidGrab Browser" className="w-full h-full min-h-[70vh] border-0 bg-white" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" />
         )}
-        {youtubeWatch && <button onClick={triggerGrab} disabled={grabbing} className="absolute right-4 bottom-4 z-40 rounded-full bg-red-600 text-white px-5 py-3 font-black shadow-2xl flex items-center gap-2"><Download className="w-5 h-5" />{grabbing ? 'SCANNING…' : 'GRAB'}</button>}
-        {youtubeSearch && <div className="absolute left-3 right-3 top-3 z-30 pointer-events-none"><div className="pointer-events-auto max-w-md mx-auto bg-white/95 backdrop-blur rounded-full border shadow-lg p-1 flex gap-1"><Search className="w-5 h-5 ml-3 my-auto text-gray-500" /><form className="flex-1 flex" onSubmit={(e) => { e.preventDefault(); const input = (e.currentTarget.elements.namedItem('q') as HTMLInputElement); runSearch(input.value); }}><input name="q" defaultValue={new URL(activeUrl).searchParams.get('search_query') || ''} className="flex-1 min-w-0 bg-transparent outline-none px-2 text-sm" /><button className="rounded-full bg-red-600 text-white px-4 py-2 font-bold text-sm">Search</button></form></div></div>}
+        {youtubeWatch && <button onClick={triggerGrab} disabled={grabbing} className="fixed right-4 bottom-5 z-40 rounded-full bg-red-600 text-white px-5 py-3 font-black shadow-2xl flex items-center gap-2"><Download className="w-5 h-5" />{grabbing ? 'SCANNING…' : 'GRAB'}</button>}
       </div>
     </div>
   );
