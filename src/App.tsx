@@ -58,8 +58,21 @@ export default function App() {
       setActiveTab('home');
       setErrorMessage(undefined);
     };
+    const onNativeNavigate = (event: Event) => {
+      const tab = String((event as CustomEvent<{tab?: string}>).detail?.tab || 'home');
+      const allowed: ActiveNavTab[] = ['home', 'music', 'video', 'files', 'me'];
+      if (!allowed.includes(tab as ActiveNavTab)) return;
+      setNativeBrowserOpen(false);
+      setActiveTab(tab as ActiveNavTab);
+      setErrorMessage(undefined);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
     window.addEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
-    return () => window.removeEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
+    window.addEventListener('vidgrab-native-navigate', onNativeNavigate);
+    return () => {
+      window.removeEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
+      window.removeEventListener('vidgrab-native-navigate', onNativeNavigate);
+    };
   }, []);
 
   useEffect(() => {
