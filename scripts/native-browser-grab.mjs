@@ -9,8 +9,6 @@ if (!fs.existsSync(mainFile) || !fs.existsSync(browserFile)) throw new Error('Na
 let main = fs.readFileSync(mainFile, 'utf8');
 if (!main.includes('static MainActivity getCurrentInstance()')) throw new Error('Generated MainActivity browser bridge not found');
 
-// Add the React/native handoff methods once. The handoff flag is reset when
-// the browser Activity is destroyed so later normal browser closes still work.
 if (!main.includes('VIDGRAB_NATIVE_GRAB_V2')) {
   const closeStart = main.indexOf('void notifyBrowserClosed()');
   if (closeStart < 0) throw new Error('notifyBrowserClosed method not found');
@@ -52,10 +50,9 @@ if (!main.includes('VIDGRAB_NATIVE_GRAB_V2')) {
 }
 
 let browser = fs.readFileSync(browserFile, 'utf8');
-if (!browser.includes('VIDGRAB_NATIVE_GRAB_V2')) {
-  browser = browser.replace('import android.webkit.WebChromeClient;', 'import android.webkit.JavascriptInterface;\nimport android.webkit.WebChromeClient;');
+if (!browser.includes('VIDGRAB_NATIVE_GRAB_V3')) {
   browser = browser.replace('public class VidGrabBrowserActivity extends Activity {', `public class VidGrabBrowserActivity extends Activity {
-    // VIDGRAB_NATIVE_GRAB_V2
+    // VIDGRAB_NATIVE_GRAB_V3
     private boolean autoGrabTriggered = false;
     private android.app.Dialog grabDialog;`);
 
@@ -75,16 +72,22 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V2')) {
   const clickNeedle = '        close.setOnClickListener(v -> finish());\n        webView.loadUrl(initial);';
   if (!browser.includes(clickNeedle)) throw new Error('Browser click handlers not found');
   browser = browser.replace(clickNeedle, `        close.setOnClickListener(v -> finish());
-        grab.setOnClickListener(v -> showGrabDialog(webView == null ? "" : webView.getUrl()));
+        grab.setOnClickListener(v -> {
+            String current = webView == null ? "" : webView.getUrl();
+            if (isVideoPageUrl(current)) showGrabDialog(current);
+            else android.widget.Toast.makeText(this, "Open a video first", android.widget.Toast.LENGTH_SHORT).show();
+        });
         webView.loadUrl(initial);`);
 
   browser = browser.replace('        webView.setBackgroundColor(Color.WHITE);', '        webView.setBackgroundColor(Color.WHITE);\n        webView.addJavascriptInterface(new BrowserMediaBridge(), "VidGrabMedia");');
-  browser = browser.replace('                syncToolbar();\n', '                syncToolbar();\n                installMediaGrabHook();\n', 1);
+  browser = browser.replace('                syncToolbar();\n', '                syncToolbar();\n                autoGrabTriggered = false;\n                installMediaGrabHook();\n', 1);
 
   const bridgeClass = `
     private class BrowserMediaBridge {
-        @JavascriptInterface public void onVideoPlay() {
+        @android.webkit.JavascriptInterface public void onVideoPlay() {
             if (autoGrabTriggered) return;
+            String current = webView == null ? "" : webView.getUrl();
+            if (!isVideoPageUrl(current)) return;
             autoGrabTriggered = true;
             runOnUiThread(() -> showGrabDialog(webView == null ? "" : webView.getUrl()));
         }
@@ -93,15 +96,23 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V2')) {
   browser = browser.replace('    @Override public void onCreate(Bundle savedInstanceState) {', bridgeClass + '\n    @Override public void onCreate(Bundle savedInstanceState) {');
 
   const hook = `
+    private boolean isVideoPageUrl(String url) {
+        if (url == null) return false;
+        String u = url.toLowerCase(java.util.Locale.US);
+        return u.matches("https?://(www\\\\.|m\\\\.)?(youtube\\\\.com/watch\\\\?[^ ]*v=[^& ]+.*|youtube\\\\.com/shorts/[^/?#]+.*|youtube\\\\.com/embed/[^/?#]+.*|youtu\\\\.be/[^/?#]+.*)")
+            || u.matches("https?://(www\\\\.)?instagram\\\\.com/(reel|p|tv)/[^/?#]+.*")
+            || u.matches("https?://(www\\\\.)?tiktok\\\\.com/.*?/video/[^/?#]+.*")
+            || u.matches("https?://(www\\\\.)?(facebook\\\\.com/watch|fb\\\\.watch/).*" )
+            || u.matches("https?://(www\\\\.)?(twitter\\\\.com|x\\\\.com)/[^/]+/status/[^/?#]+.*");
+    }
+
     private void installMediaGrabHook() {
         String script = "(function(){try{function h(v){if(v.dataset.vgGrab)return;v.dataset.vgGrab='1';v.addEventListener('play',function(){if(window.VidGrabMedia)window.VidGrabMedia.onVideoPlay();},{once:true});}document.querySelectorAll('video').forEach(h);if(document.documentElement)new MutationObserver(function(){document.querySelectorAll('video').forEach(h)}).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}})()";
         try { webView.evaluateJavascript(script, null); } catch (Exception ignored) {}
     }
 
-    // VidMate-style native confirmation sheet. It is shown ON TOP of the
-    // currently playing WebView video; cancelling leaves playback untouched.
     private void showGrabDialog(String url) {
-        if (isFinishing() || (grabDialog != null && grabDialog.isShowing())) return;
+        if (!isVideoPageUrl(url) || isFinishing() || (grabDialog != null && grabDialog.isShowing())) return;
         android.app.Dialog dialog = new android.app.Dialog(this);
         grabDialog = dialog;
         LinearLayout box = new LinearLayout(this);
@@ -227,4 +238,4 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V2')) {
   fs.writeFileSync(browserFile, browser);
 }
 
-console.log('[native-browser-grab] VidMate-style single native GRAB sheet keeps video playing until GRAB; raised browser navigation and Android-system-nav-safe handoff generated');
+console.log('[native-browser-grab] selected-video-only GRAB flow generated; search-result previews no longer trigger download popup');
