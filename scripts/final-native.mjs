@@ -13,7 +13,7 @@ source=source.replace('        if (bridge != null && bridge.getWebView() != null
 
             // VIDGRAB_ANDROID_SYSTEM_BARS_V9
             getWindow().setStatusBarColor(Color.rgb(248, 250, 252));
-            getWindow().setNavigationBarColor(Color.rgb(248, 250, 252));
+            getWindow().setNavigationBarColor(Color.TRANSPARENT);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 int flags = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
@@ -74,5 +74,20 @@ if(!source.includes('VIDGRAB_ANDROID_BACK_V2')){
         });`;
  source=source.replace(anchor,code);
 }
+
+// Keep Android's system navigation controls out of the app so VidGrab's own
+// bottom navigation occupies the bottom edge. Android can still reveal the
+// system controls transiently with the system gesture when required.
+if(!source.includes('VIDGRAB_SYSTEM_NAV_HIDDEN_V1')){
+ source=source.replace('public class MainActivity extends BridgeActivity {','public class MainActivity extends BridgeActivity {\n    // VIDGRAB_SYSTEM_NAV_HIDDEN_V1');
+ const hide=`\n    private void hideVidGrabSystemNavigation() {\n        try {\n            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n                android.view.WindowInsetsController controller = getWindow().getInsetsController();\n                if (controller != null) {\n                    controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);\n                    controller.hide(android.view.WindowInsets.Type.navigationBars());\n                }\n            } else {\n                getWindow().getDecorView().setSystemUiVisibility(\n                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |\n                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |\n                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |\n                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |\n                    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR\n                );\n            }\n        } catch (Exception ignored) {}\n    }\n`;
+ source=source.slice(0,source.lastIndexOf('\n}'))+hide+'\n}\n';
+}
+if(!source.includes('hideVidGrabSystemNavigation();')){
+ source=source.replace('super.onCreate(savedInstanceState);','super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();',1);
+}
+if(!source.includes('void onWindowFocusChanged(boolean hasFocus)')){
+ source=source.slice(0,source.lastIndexOf('\n}'))+`\n    @Override public void onWindowFocusChanged(boolean hasFocus) {\n        super.onWindowFocusChanged(hasFocus);\n        if (hasFocus) hideVidGrabSystemNavigation();\n    }\n`+'\n}\n';
+}
 fs.writeFileSync(file,source);
-console.log('[native] VidGrab V9 safe area + predictive browser back applied');
+console.log('[native] VidGrab V9 safe area + predictive browser back + hidden Android system navigation applied');
