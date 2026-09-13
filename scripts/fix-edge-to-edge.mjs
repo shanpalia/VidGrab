@@ -22,11 +22,18 @@ if(text.includes('VIDGRAB_ANDROID_INSETS_V8'))throw new Error('Obsolete V8 inset
 if(!text.includes('VIDGRAB_ANDROID_BACK_V2'))throw new Error('Missing predictive browser Back interception.');
 if(!text.includes('VidGrabAndroidBack'))throw new Error('Missing React browser Back bridge call.');
 if(!text.includes('public boolean openBrowser(String url)'))throw new Error('Missing native browser bridge method.');
+if(!text.includes('VIDGRAB_SYSTEM_NAV_HIDDEN_V1'))throw new Error('Android system navigation is not hidden.');
+if(!text.includes('hideVidGrabSystemNavigation()'))throw new Error('Missing system navigation hide method.');
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
 if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
 if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing browser GRAB control.');
 if(!text.includes('notifyBrowserGrab(String url)'))throw new Error('Missing native browser GRAB handoff method.');
+if(!text.includes('notifyBrowserNavigate(String tab)'))throw new Error('Missing native browser navigation handoff method.');
 if(!browserText.includes('main.notifyBrowserGrab(webView.getUrl())'))throw new Error('Missing browser GRAB click handoff.');
+if(!browserText.includes('BrowserMediaBridge'))throw new Error('Missing automatic video-play GRAB bridge.');
+if(!browserText.includes('installMediaGrabHook()'))throw new Error('Missing automatic media-play hook.');
+if(!browserText.includes('VIDGRAB_NATIVE_BOTTOM_NAV_V1'))throw new Error('Missing native browser bottom navigation.');
+if(!browserText.includes('hideVidGrabSystemNavigation()'))throw new Error('Browser Android system navigation is not hidden.');
 if(!browserText.includes('webView.canGoBack()'))throw new Error('Native browser Back history handling missing.');
 if(!browserText.includes('setNestedScrollingEnabled(true)'))throw new Error('Native browser scrolling configuration missing.');
 if(!manifestText.includes('VidGrabBrowserActivity'))throw new Error('Native browser Activity is not declared in AndroidManifest.xml.');
@@ -49,4 +56,4 @@ function verifyJava(text,name){
 
 verifyJava(text,'Generated MainActivity.java');
 verifyJava(browserText,'Generated VidGrabBrowserActivity.java');
-console.log('VidGrab Android V9 safe-area, public native browser, GRAB handoff and predictive Back patches verified successfully.');
+console.log('VidGrab Android V9 safe-area, hidden system navigation, public native browser, persistent browser navigation, auto-GRAB and predictive Back patches verified successfully.');
