@@ -62,6 +62,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const onNativeGrab = async (event: Event) => {
+      const url = String((event as CustomEvent<{url?: string}>).detail?.url || '').trim();
+      if (!url) return;
+      setNativeBrowserOpen(false);
+      setErrorMessage(undefined);
+      await handleGrab(url);
+    };
+    window.addEventListener('vidgrab-native-grab', onNativeGrab);
+    return () => window.removeEventListener('vidgrab-native-grab', onNativeGrab);
+  }, []);
+
+  useEffect(() => {
     if (showSplash) return;
     let cancelled = false;
     let lastSeen = '';
