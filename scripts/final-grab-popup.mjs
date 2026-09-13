@@ -11,7 +11,7 @@ if(!source.includes("const [grabUrl, setGrabUrl]")){
 }
 
 const oldHandler=`    const onNativeGrab = async (event: Event) => {\n      const url = String((event as CustomEvent<{url?: string}>).detail?.url || '').trim();\n      if (!url) return;\n      setNativeBrowserOpen(false);\n      setErrorMessage(undefined);\n      await handleGrab(url);\n    };`;
-const newHandler=`    const onNativeGrab = (event: Event) => {\n      const url = String((event as CustomEvent<{url?: string}>).detail?.url || '').trim();\n      if (!url) return;\n      setNativeBrowserOpen(false);\n      setErrorMessage(undefined);\n      setGrabUrl(url);\n    };`;
+const newHandler=`    const onNativeGrab = (event: Event) => {\n      const url = String((event as CustomEvent<{url?: string}>).detail?.url || '').trim();\n      if (!url) return;\n      setNativeBrowserOpen(false);\n      setActiveTab('home');\n      setErrorMessage(undefined);\n      setGrabUrl(url);\n    };`;
 if(source.includes(oldHandler)) source=source.replace(oldHandler,newHandler);
 
 if(!source.includes('Grab this media?')){
@@ -22,4 +22,4 @@ if(!source.includes('Grab this media?')){
 }
 
 fs.writeFileSync(file,source);
-console.log('[grab-popup] VidMate-style GRAB confirmation popup wired');
+console.log('[grab-popup] VidMate-style GRAB confirmation popup wired with Home + bottom navigation behind it');
