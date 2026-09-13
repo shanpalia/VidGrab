@@ -32,10 +32,6 @@ function findMethod(text, signature) {
 const searchMethod = `  static async getYouTubeSearchFromPublicApi(query: string): Promise<any[]> {
     const q = query.trim();
     if (!q) return [];
-
-    // Invidious exposes the public YouTube search data without requiring an API key.
-    // Multiple instances are tried in parallel so one dead instance cannot leave the
-    // Android app stuck on "Fetching YouTube search results...".
     const instances = [
       'https://inv.nadeko.net',
       'https://yewtu.be',
@@ -48,31 +44,27 @@ const searchMethod = `  static async getYouTubeSearchFromPublicApi(query: string
     ];
 
     const fetchInstance = async (base: string) => {
-      const res = await fetch(
-        base + '/api/v1/search?q=' + encodeURIComponent(q) + '&type=video',
-        { signal: AbortSignal.timeout(6500), headers: { Accept: 'application/json' } }
-      );
+      const res = await fetch(base + '/api/v1/search?q=' + encodeURIComponent(q) + '&type=video', {
+        signal: AbortSignal.timeout(6500),
+        headers: { Accept: 'application/json' }
+      });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('Invalid search response');
-      return data
-        .filter((item: any) => item?.type === 'video' && item?.videoId)
-        .slice(0, 20)
-        .map((item: any) => {
-          const thumbs = Array.isArray(item.videoThumbnails) ? item.videoThumbnails : [];
-          const thumb = thumbs.length ? thumbs[thumbs.length - 1]?.url : '';
-          return {
-            id: item.videoId,
-            title: item.title || 'YouTube Video',
-            channel: item.author || 'YouTube',
-            views: item.viewCount ? String(item.viewCount) + ' views' : '',
-            publishedAt: item.publishedText || '',
-            duration: item.lengthSeconds ? String(item.lengthSeconds) : '',
-            thumbnail: thumb || 'https://i.ytimg.com/vi/' + item.videoId + '/hqdefault.jpg',
-            url: 'https://www.youtube.com/watch?v=' + item.videoId,
-            videoUrl: 'https://www.youtube.com/watch?v=' + item.videoId
-          };
-        });
+      return data.filter((item: any) => item?.type === 'video' && item?.videoId).slice(0, 20).map((item: any) => {
+        const thumbs = Array.isArray(item.videoThumbnails) ? item.videoThumbnails : [];
+        return {
+          id: item.videoId,
+          title: item.title || 'YouTube Video',
+          channel: item.author || 'YouTube',
+          views: item.viewCount ? String(item.viewCount) + ' views' : '',
+          publishedAt: item.publishedText || '',
+          duration: item.lengthSeconds ? String(item.lengthSeconds) : '',
+          thumbnail: thumbs.length ? thumbs[thumbs.length - 1]?.url : 'https://i.ytimg.com/vi/' + item.videoId + '/hqdefault.jpg',
+          url: 'https://www.youtube.com/watch?v=' + item.videoId,
+          videoUrl: 'https://www.youtube.com/watch?v=' + item.videoId
+        };
+      });
     };
 
     try {
@@ -80,14 +72,8 @@ const searchMethod = `  static async getYouTubeSearchFromPublicApi(query: string
       if (results.length) return results;
     } catch {}
 
-    // Last fallback: fetch the actual YouTube results page through public CORS proxies
-    // and extract ytInitialData.videoRenderer entries. No demo/fake results are used.
     const target = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
-    const proxies = [
-      'https://api.allorigins.win/raw?url=',
-      'https://corsproxy.io/?url='
-    ];
-    for (const prefix of proxies) {
+    for (const prefix of ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?url=']) {
       try {
         const res = await fetch(prefix + encodeURIComponent(target), { signal: AbortSignal.timeout(12000) });
         if (!res.ok) continue;
@@ -96,10 +82,7 @@ const searchMethod = `  static async getYouTubeSearchFromPublicApi(query: string
         if (marker < 0) continue;
         const start = html.indexOf('{', marker);
         if (start < 0) continue;
-        let depth = 0;
-        let quote = false;
-        let escaped = false;
-        let end = -1;
+        let depth = 0, quote = false, escaped = false, end = -1;
         for (let i = start; i < html.length; i += 1) {
           const c = html[i];
           if (quote) {
@@ -115,8 +98,8 @@ const searchMethod = `  static async getYouTubeSearchFromPublicApi(query: string
         if (end < 0) continue;
         let root;
         try { root = JSON.parse(html.slice(start, end)); } catch { continue; }
-        const out: any[] = [];
-        const seen = new Set<string>();
+        const out = [];
+        const seen = new Set();
         const text = (node: any) => node?.simpleText || (Array.isArray(node?.runs) ? node.runs.map((r: any) => r?.text || '').join('') : '');
         const walk = (node: any) => {
           if (!node || out.length >= 20) return;
@@ -156,8 +139,6 @@ if (!search) throw new Error('getYouTubeSearch method not found');
 const searchReplacement = `  static async getYouTubeSearch(query: string): Promise<any[]> {
     const q = query.trim();
     if (!q) return [];
-    // Use the same real public providers in the standalone Android build.
-    // There is deliberately no hardcoded/demo fallback.
     return this.getYouTubeSearchFromPublicApi(q);
   }`;
 source = source.slice(0, search.start) + searchReplacement + source.slice(search.end);
