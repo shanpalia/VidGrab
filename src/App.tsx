@@ -51,6 +51,12 @@ export default function App() {
   useEffect(() => { refreshStorage(); void NativeStorage.ensureFolders(); }, []);
 
   useEffect(() => {
+    const onNativeBrowserClosed = () => { setActiveTab('home'); setErrorMessage(undefined); };
+    window.addEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
+    return () => window.removeEventListener('vidgrab-native-browser-closed', onNativeBrowserClosed);
+  }, []);
+
+  useEffect(() => {
     if (showSplash) return;
     let cancelled = false;
     let lastSeen = '';
@@ -77,7 +83,12 @@ export default function App() {
     } catch (err: any) { setErrorMessage(err?.message || 'Unable to analyze this media URL.'); }
   };
 
-  const handleOpenBrowser = (url: string) => { setBrowserUrl(url); setActiveTab('browser'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handleOpenBrowser = (url: string) => {
+    setBrowserUrl(url);
+    setActiveTab('browser');
+    const openedNative = NativeStorage.openBrowser(url);
+    if (!openedNative) window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const handleStartDownload = (format: MediaFormat, title: string, location: string) => { setSelectedFormat(format); setCustomTitle(title); setDownloadLocation(location); setActiveTab('progress'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const handleBackToHome = () => { setActiveTab('home'); setErrorMessage(undefined); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const handleBackToResult = () => { setActiveTab('result'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
@@ -91,7 +102,7 @@ export default function App() {
       {!isBrowser && <Header activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}
       <main className={isBrowser ? 'flex-1 min-h-0 overflow-hidden vidgrab-browser-main' : 'flex-1 vidgrab-app-main'}>
         {activeTab === 'home' && <HomePage onOpenBrowser={handleOpenBrowser} onOpenDownloadPage={handleGrab} onOpenMoreSites={() => navigate('platforms')} />}
-        {activeTab === 'browser' && <InAppBrowser initialUrl={browserUrl} onClose={handleBackToHome} onOpenDownloadPage={(metadata) => { setCurrentMetadata(metadata); setCustomTitle(metadata.title); setActiveTab('result'); }} />}
+        {activeTab === 'browser' && !NativeStorage.isAndroidBridgeAvailable && <InAppBrowser initialUrl={browserUrl} onClose={handleBackToHome} onOpenDownloadPage={(metadata) => { setCurrentMetadata(metadata); setCustomTitle(metadata.title); setActiveTab('result'); }} />}
         {activeTab === 'music' && <MusicPage onOpenDownloadPage={handleGrab} onOpenBrowser={handleOpenBrowser} />}
         {activeTab === 'video' && <VideoPage onOpenDownloadPage={handleGrab} onOpenBrowser={handleOpenBrowser} />}
         {activeTab === 'platforms' && <SupportedPlatformsPage onBack={handleBackToHome} onSelectSample={handleOpenBrowser} />}
@@ -102,14 +113,11 @@ export default function App() {
         {activeTab === 'me' && <MorePage />}
       </main>
       {!isBrowser && <Footer />}
-
       {activePlaybackFile && !isPlayerMaximized && <MiniPlayer file={activePlaybackFile} isPlaying={isPlaybackPlaying} onTogglePlay={(e) => { e.stopPropagation(); setIsPlaybackPlaying((v) => !v); }} onMaximize={() => setIsPlayerMaximized(true)} onClose={(e) => { e.stopPropagation(); setActivePlaybackFile(null); }} />}
       {activePlaybackFile && isPlayerMaximized && activePlaybackFile.type === 'video' && <VidGrabVideoPlayer file={activePlaybackFile} onClose={() => setActivePlaybackFile(null)} onMinimize={() => setIsPlayerMaximized(false)} onFileUpdated={refreshStorage} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActivePlaybackFile(null); }} />}
       {activePlaybackFile && isPlayerMaximized && activePlaybackFile.type === 'audio' && <VidGrabAudioPlayer file={activePlaybackFile} onClose={() => setActivePlaybackFile(null)} onMinimize={() => setIsPlayerMaximized(false)} onFileUpdated={refreshStorage} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActivePlaybackFile(null); }} />}
       {activeImageViewerFile && <VidGrabImageViewer file={activeImageViewerFile} onClose={() => setActiveImageViewerFile(null)} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActiveImageViewerFile(null); }} />}
-
       {!isBrowser && <BottomNav activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}
-
       {clipboardUrl && (
         <div className="fixed inset-0 z-[200] bg-black/55 flex items-center justify-center p-5">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden">
