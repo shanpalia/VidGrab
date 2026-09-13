@@ -24,6 +24,13 @@ if(!text.includes('VidGrabAndroidBack'))throw new Error('Missing React browser B
 if(!text.includes('public boolean openBrowser(String url)'))throw new Error('Missing native browser bridge method.');
 if(!text.includes('VIDGRAB_SYSTEM_NAV_HIDDEN_V1'))throw new Error('Android system navigation is not hidden.');
 if(!text.includes('hideVidGrabSystemNavigation()'))throw new Error('Missing system navigation hide method.');
+
+const mainBoundary=text.indexOf('\n}\n\nclass VidGrabNative');
+if(mainBoundary<0)throw new Error('MainActivity/VidGrabNative class boundary missing.');
+const mainClass=text.slice(0,mainBoundary);
+if(!mainClass.includes('private void hideVidGrabSystemNavigation()'))throw new Error('System navigation hide method was injected outside MainActivity.');
+if(!mainClass.includes('void onWindowFocusChanged(boolean hasFocus)'))throw new Error('Window-focus navigation restore method was injected outside MainActivity.');
+
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
 if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
 if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing browser GRAB control.');
