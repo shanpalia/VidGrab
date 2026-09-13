@@ -6,9 +6,17 @@ if (!fs.existsSync(mainActivity)) throw new Error('MainActivity.java not found')
 
 const text = fs.readFileSync(mainActivity, 'utf8');
 
-// Safe-area handling is generated directly by patch-android.mjs.
-if (!text.includes('VIDGRAB_ANDROID_SAFE_AREA_V5')) {
-  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_SAFE_AREA_V5 safe-area patch.');
+// final-native.mjs intentionally upgrades the generated V5 marker to V7 and
+// installs explicit WindowInsets handling. Verify the final generated source,
+// not the intermediate patch-android.mjs output.
+if (!text.includes('VIDGRAB_ANDROID_SAFE_AREA_V7')) {
+  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_SAFE_AREA_V7 safe-area patch.');
+}
+if (!text.includes('VIDGRAB_ANDROID_INSETS_V7')) {
+  throw new Error('MainActivity.java is missing the VIDGRAB_ANDROID_INSETS_V7 WindowInsets patch.');
+}
+if (!text.includes('setDecorFitsSystemWindows(false)')) {
+  throw new Error('MainActivity.java is missing the V7 edge-to-edge window configuration.');
 }
 
 let depth = 0;
@@ -30,4 +38,4 @@ for (let i = 0; i < text.length; i += 1) {
 }
 if (inString || inBlockComment || depth !== 0) throw new Error(`Generated MainActivity.java has unbalanced syntax (brace depth: ${depth}).`);
 
-console.log('VidGrab Android normal-window safe-area patch verified; no second Java mutation applied.');
+console.log('VidGrab Android V7 safe-area and WindowInsets patch verified; no second Java mutation applied.');
