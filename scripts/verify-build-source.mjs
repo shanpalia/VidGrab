@@ -16,8 +16,9 @@ function walk(dir) {
   }
 }
 
+// Only scan shipped application source. Build-time verifier scripts intentionally
+// contain the forbidden marker strings so they can detect stale output.
 walk(path.join(root, 'src'));
-walk(path.join(root, 'scripts'));
 
 const homePath = path.join(root, 'src/components/HomePage.tsx');
 if (!fs.existsSync(homePath)) throw new Error('[verify] Missing current HomePage source.');
