@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import './native-browser-grab.mjs';
 
 const androidDir=path.join(process.cwd(),'android','app','src','main');
 const mainActivity=path.join(androidDir,'java','com','shanpalia','vidgrab','MainActivity.java');
@@ -23,6 +24,8 @@ if(!text.includes('VidGrabAndroidBack'))throw new Error('Missing React browser B
 if(!text.includes('public boolean openBrowser(String url)'))throw new Error('Missing native browser bridge method.');
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
 if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
+if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing browser GRAB control.');
+if(!text.includes('VIDGRAB_NATIVE_GRAB_V1'))throw new Error('Missing native browser GRAB handoff.');
 if(!browserText.includes('webView.canGoBack()'))throw new Error('Native browser Back history handling missing.');
 if(!browserText.includes('setNestedScrollingEnabled(true)'))throw new Error('Native browser scrolling configuration missing.');
 if(!manifestText.includes('VidGrabBrowserActivity'))throw new Error('Native browser Activity is not declared in AndroidManifest.xml.');
@@ -45,4 +48,4 @@ function verifyJava(text,name){
 
 verifyJava(text,'Generated MainActivity.java');
 verifyJava(browserText,'Generated VidGrabBrowserActivity.java');
-console.log('VidGrab Android V9 safe-area, public native browser and predictive Back patches verified successfully.');
+console.log('VidGrab Android V9 safe-area, public native browser, GRAB handoff and predictive Back patches verified successfully.');
