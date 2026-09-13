@@ -13,9 +13,11 @@ button, a, input, textarea, select { max-width:100%; }
 }
 .vidgrab-browser-main { width:100%; flex:1 1 auto; min-height:0; overflow:hidden; padding:0; }
 .vidgrab-browser-safe { width:100%; height:100%; min-height:0; padding:0; }
+.vidgrab-app-main { width:100%; flex:1 1 auto; min-height:0; height:auto; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; touch-action:pan-y; padding-bottom:104px; }
+.vidgrab-screen { width:100%; max-width:none; min-width:0; }
 @media (max-width:1024px) {
   .vidgrab-app-header { display:block !important; flex:0 0 auto; }
-  .vidgrab-app-main { width:100%; flex:1 1 auto; height:auto; min-height:0; padding-bottom:104px; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
+  .vidgrab-app-main { padding-bottom:104px; }
   .vidgrab-screen { width:100%; max-width:none; margin:0; padding:12px; }
   .vidgrab-browser-main { height:100%; flex:1 1 auto; min-height:0; padding:0; }
   .vidgrab-browser-safe { height:100%; min-height:0; padding:0; }
