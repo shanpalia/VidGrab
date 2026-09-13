@@ -8,9 +8,9 @@
     "build": "node scripts/fix-app-layout.mjs && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist server.js android",
     "lint": "tsc --noEmit",
-    "android:prepare": "npm run build && (test -d android || npx cap add android) && npx cap copy android && node scripts/patch-android.mjs && node scripts/final-native.mjs && node scripts/fix-edge-to-edge.mjs",
+    "android:prepare": "npm run build && rm -rf android && npx cap add android && npx cap copy android && node scripts/patch-android.mjs && node scripts/final-native.mjs && node scripts/fix-edge-to-edge.mjs",
     "android:build": "npm run android:prepare && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
