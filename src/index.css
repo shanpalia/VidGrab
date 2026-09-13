@@ -28,10 +28,12 @@ button, a, input, textarea, select { max-width: 100%; }
   padding: 0;
 }
 
-@media (max-width: 767px) {
-  /* Android native MainActivity reserves the real status/navigation insets.
-     Do not add a second top inset here: that caused the old double/overlap layout. */
-  .vidgrab-top-safe { padding-top: 0 !important; }
+/* Android WebView can report a ~930px CSS viewport on a phone.
+   Use a real device-width breakpoint instead of Tailwind md (768px). */
+@media (max-width: 1024px) {
+  .vidgrab-app-header {
+    display: none !important;
+  }
 
   .vidgrab-app-main {
     width: 100%;
@@ -67,6 +69,12 @@ button, a, input, textarea, select { max-width: 100%; }
   }
 }
 
+@media (min-width: 1025px) {
+  .vidgrab-app-main {
+    min-height: 0;
+  }
+}
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 1) forwards; }
 @keyframes splashProgress { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
