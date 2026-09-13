@@ -7,7 +7,7 @@ let source = fs.readFileSync(file, 'utf8');
 
 if (!source.includes('VIDGRAB_NATIVE_BROWSER_V1')) {
   source = source.replace('import android.webkit.JavascriptInterface;\n', 'import android.webkit.JavascriptInterface;\nimport android.webkit.WebChromeClient;\nimport android.webkit.WebView;\nimport android.webkit.WebViewClient;\nimport android.graphics.drawable.GradientDrawable;\nimport android.view.Gravity;\nimport android.view.View;\nimport android.view.ViewGroup;\nimport android.widget.EditText;\nimport android.widget.ImageButton;\nimport android.widget.LinearLayout;\nimport android.widget.TextView;\n');
-  source = source.replace('public class MainActivity extends BridgeActivity {\n', 'public class MainActivity extends BridgeActivity {\n    private static MainActivity currentInstance;\n    static MainActivity getCurrentInstance() { return currentInstance; }\n');
+  source = source.replace('public class MainActivity extends BridgeActivity {\n', 'public class MainActivity extends BridgeActivity {\n    private static MainActivity currentInstance;\n    static MainActivity getCurrentInstance() { return currentInstance; }\n    void notifyBrowserClosed() {\n        if (bridge != null && bridge.getWebView() != null) {\n            bridge.getWebView().post(() -> bridge.getWebView().evaluateJavascript("window.dispatchEvent(new Event(\\\'vidgrab-native-browser-closed\\\'));", null));\n        }\n    }\n');
   source = source.replace('super.onCreate(savedInstanceState);\n', 'super.onCreate(savedInstanceState);\n        currentInstance = this;\n', 1);
   const bridgeNeedle = '    @JavascriptInterface\n    public String getDownloadRoot()';
   const bridgeMethod = '    @JavascriptInterface\n    public boolean openBrowser(String url) {\n        try {\n            Intent intent = new Intent(activity, VidGrabBrowserActivity.class);\n            intent.putExtra("url", url == null || url.trim().isEmpty() ? "https://www.youtube.com/" : url.trim());\n            activity.startActivity(intent);\n            return true;\n        } catch (Exception e) { return false; }\n    }\n\n';
@@ -37,7 +37,7 @@ class VidGrabBrowserActivity extends android.app.Activity {
         getWindow().setNavigationBarColor(android.graphics.Color.WHITE);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
             getWindow().getDecorView().setSystemUiVisibility(flags);
         }
         String initial = getIntent().getStringExtra("url");
@@ -73,7 +73,7 @@ class VidGrabBrowserActivity extends android.app.Activity {
         else webView.loadUrl("https://www.youtube.com/results?search_query="+android.net.Uri.encode(value));
     }
     @Override public void onBackPressed(){ if(webView!=null&&webView.canGoBack()) webView.goBack(); else finish(); }
-    @Override protected void onDestroy(){ if(webView!=null){webView.stopLoading();webView.destroy();webView=null;} MainActivity main=MainActivity.getCurrentInstance(); if(main!=null&&main.bridge!=null&&main.bridge.getWebView()!=null) main.bridge.getWebView().post(()->main.bridge.getWebView().evaluateJavascript("window.dispatchEvent(new Event('vidgrab-native-browser-closed'));",null)); super.onDestroy(); }
+    @Override protected void onDestroy(){ if(webView!=null){webView.stopLoading();webView.destroy();webView=null;} MainActivity main=MainActivity.getCurrentInstance(); if(main!=null) main.notifyBrowserClosed(); super.onDestroy(); }
 }
 `;
 }
