@@ -36,10 +36,20 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload release APK
+      - name: Build installable debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Show generated APKs
+        run: |
+          find android/app/build/outputs/apk -type f -name '*.apk' -print
+
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: VidGrab-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: VidGrab-APK
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
