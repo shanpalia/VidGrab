@@ -9,30 +9,37 @@ if (!fs.existsSync(mainFile)) throw new Error('MainActivity.java not found');
 fs.mkdirSync(javaDir, { recursive: true });
 
 let source = fs.readFileSync(mainFile, 'utf8');
-
-// Remove the older package-private browser class if a previously generated
-// Android tree is ever reused. android:exported=false activities must still
-// be publicly instantiable by the Android framework.
 const marker = '// VIDGRAB_NATIVE_BROWSER_V1';
 const markerIndex = source.indexOf(marker);
 if (markerIndex >= 0) source = source.slice(0, markerIndex).trimEnd() + '\n';
 
 if (!source.includes('VIDGRAB_NATIVE_BROWSER_V2')) {
-  source = source.replace(
-    'import android.webkit.JavascriptInterface;\n',
-    'import android.webkit.JavascriptInterface;\n'
-  );
-
   const classNeedle = 'public class MainActivity extends BridgeActivity {\n';
-  const classReplacement = `public class MainActivity extends BridgeActivity {\n    private static MainActivity currentInstance;\n    static MainActivity getCurrentInstance() { return currentInstance; }\n    void notifyBrowserClosed() {\n        if (bridge != null && bridge.getWebView() != null) {\n            bridge.getWebView().post(() -> bridge.getWebView().evaluateJavascript(\"window.dispatchEvent(new Event('vidgrab-native-browser-closed'));\", null));\n        }\n    }\n`;
+  const classReplacement = `public class MainActivity extends BridgeActivity {
+    private static MainActivity currentInstance;
+    static MainActivity getCurrentInstance() { return currentInstance; }
+    void notifyBrowserClosed() {
+        if (bridge != null && bridge.getWebView() != null) {
+            bridge.getWebView().post(() -> bridge.getWebView().evaluateJavascript("window.dispatchEvent(new Event('vidgrab-native-browser-closed'));", null));
+        }
+    }
+`;
   source = source.replace(classNeedle, classReplacement);
   source = source.replace('super.onCreate(savedInstanceState);\n', 'super.onCreate(savedInstanceState);\n        currentInstance = this;\n', 1);
-
   const bridgeNeedle = '    @JavascriptInterface\n    public String getDownloadRoot()';
-  const bridgeMethod = `    @JavascriptInterface\n    public boolean openBrowser(String url) {\n        try {\n            Intent intent = new Intent(activity, VidGrabBrowserActivity.class);\n            intent.putExtra(\"url\", url == null || url.trim().isEmpty() ? \"https://www.youtube.com/\" : url.trim());\n            activity.startActivity(intent);\n            return true;\n        } catch (Exception e) { return false; }\n    }\n\n`;
+  const bridgeMethod = `    @JavascriptInterface
+    public boolean openBrowser(String url) {
+        try {
+            Intent intent = new Intent(activity, VidGrabBrowserActivity.class);
+            intent.putExtra("url", url == null || url.trim().isEmpty() ? "https://www.youtube.com/" : url.trim());
+            activity.startActivity(intent);
+            return true;
+        } catch (Exception e) { return false; }
+    }
+
+`;
   source = source.replace(bridgeNeedle, bridgeMethod + bridgeNeedle);
 }
-
 source = source.replace('VIDGRAB_NATIVE_BROWSER_V1', 'VIDGRAB_NATIVE_BROWSER_V2');
 fs.writeFileSync(mainFile, source);
 
@@ -86,12 +93,11 @@ public class VidGrabBrowserActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        hideVidGrabSystemNavigation();
         getWindow().setStatusBarColor(Color.WHITE);
-        getWindow().setNavigationBarColor(Color.WHITE);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-            getWindow().getDecorView().setSystemUiVisibility(flags);
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         }
 
         String initial = getIntent().getStringExtra("url");
@@ -100,7 +106,7 @@ public class VidGrabBrowserActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
-        root.setFitsSystemWindows(true);
+        root.setFitsSystemWindows(false);
 
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setGravity(Gravity.CENTER_VERTICAL);
@@ -159,12 +165,8 @@ public class VidGrabBrowserActivity extends Activity {
                 super.onPageFinished(view, url);
                 syncToolbar();
             }
-            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return false;
-            }
-            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return false;
-            }
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return false; }
+            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) { return false; }
         });
         root.addView(webView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
@@ -191,20 +193,40 @@ public class VidGrabBrowserActivity extends Activity {
     private void loadAddress() {
         String value = address.getText().toString().trim();
         if (value.isEmpty()) return;
-        if (value.matches("(?i)^https?://.*")) {
-            webView.loadUrl(value);
-        } else if (value.matches("^\\\\S+\\\\.\\\\S+.*$")) {
-            webView.loadUrl("https://" + value);
-        } else {
-            webView.loadUrl("https://www.youtube.com/results?search_query=" + Uri.encode(value));
-        }
+        if (value.matches("(?i)^https?://.*")) webView.loadUrl(value);
+        else if (value.matches("^\\\\S+\\\\.\\\\S+.*$")) webView.loadUrl("https://" + value);
+        else webView.loadUrl("https://www.youtube.com/results?search_query=" + Uri.encode(value));
+    }
+
+    private void hideVidGrabSystemNavigation() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.view.WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                    controller.hide(android.view.WindowInsets.Type.navigationBars());
+                }
+            } else {
+                getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    @Override public void onResume() {
+        super.onResume();
+        hideVidGrabSystemNavigation();
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideVidGrabSystemNavigation();
     }
 
     @Override public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-            return;
-        }
+        if (webView != null && webView.canGoBack()) { webView.goBack(); return; }
         finish();
     }
 
@@ -232,4 +254,4 @@ if (fs.existsSync(manifest)) {
   fs.writeFileSync(manifest, text);
 }
 
-console.log('[native-browser] public Android WebView browser activity generated');
+console.log('[native-browser] public Android WebView browser activity generated with immersive navigation hiding');
