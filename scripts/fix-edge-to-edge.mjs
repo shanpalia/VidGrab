@@ -32,7 +32,7 @@ if(!mainClass.includes('private void hideVidGrabSystemNavigation()'))throw new E
 if(!mainClass.includes('void onWindowFocusChanged(boolean hasFocus)'))throw new Error('Window-focus navigation restore method was injected outside MainActivity.');
 
 if(!browserText.includes('public class VidGrabBrowserActivity'))throw new Error('Native browser Activity is not public.');
-if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2'))throw new Error('Missing native browser Activity V2 marker.');
+if(!browserText.includes('VIDGRAB_NATIVE_BROWSER_V2') && !browserText.includes('VIDGRAB_NATIVE_BROWSER_V3'))throw new Error('Missing native browser Activity V2/V3 marker.');
 if(!browserText.includes('VIDGRAB_NATIVE_GRAB_V2') && !browserText.includes('VIDGRAB_NATIVE_GRAB_V1') && !browserText.includes('VIDGRAB_NATIVE_GRAB_V3'))throw new Error('Missing browser GRAB control.');
 if(!browserText.includes('showGrabDialog('))throw new Error('Missing native GRAB dialog implementation.');
 if(!text.includes('notifyBrowserGrab(String url)'))throw new Error('Missing native browser GRAB handoff method.');
@@ -67,4 +67,4 @@ function verifyJava(text,name){
 
 verifyJava(text,'Generated MainActivity.java');
 verifyJava(browserText,'Generated VidGrabBrowserActivity.java');
-console.log('VidGrab Android V9 safe-area, hidden system navigation, public native browser, persistent browser navigation, selected-video-only auto-GRAB and predictive Back patches verified successfully.');
+console.log('VidGrab Android V9 safe-area, hidden system navigation, public native browser V3, persistent browser navigation, selected-video-only auto-GRAB, duplicate site-nav suppression and predictive Back patches verified successfully.');
