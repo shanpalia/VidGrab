@@ -211,15 +211,14 @@ const gradleFile = path.join(android, 'app', 'build.gradle');
 if (fs.existsSync(gradleFile)) {
   let gradle = fs.readFileSync(gradleFile, 'utf8');
 
-  // Never call file(null) on GitHub Actions. Configure signing only when
-  // all Codemagic signing variables are available.
-  const signingReady = ['CM_KEYSTORE_PATH','CM_KEYSTORE_PASSWORD','CM_KEY_ALIAS','CM_KEY_PASSWORD']
+  // GitHub Actions has no Codemagic CM_* variables. Never call file(null)
+  // and never touch Capacitor's generated SDK configuration in that case.
+  const signingReady = ['CM_KEYSTORE_PATH', 'CM_KEYSTORE_PASSWORD', 'CM_KEY_ALIAS', 'CM_KEY_PASSWORD']
     .every((key) => Boolean(process.env[key]));
-
-  gradle = gradle.replace(/\n\s*signingConfigs\s*\{[\s\S]*?\n\s*\}\n(?=\s*buildTypes\s*\{)/, '\n');
 
   if (signingReady && gradle.includes('android {')) {
     gradle = gradle.replace(/android\s*\{/, `android {\n    signingConfigs {\n        release {\n            storeFile file(System.getenv('CM_KEYSTORE_PATH'))\n            storePassword System.getenv('CM_KEYSTORE_PASSWORD')\n            keyAlias System.getenv('CM_KEY_ALIAS')\n            keyPassword System.getenv('CM_KEY_PASSWORD')\n        }\n    }`, 1);
+
     if (gradle.includes('buildTypes {') && !gradle.includes('signingConfig signingConfigs.release')) {
       gradle = gradle.replace(/buildTypes\s*\{\s*release\s*\{/, `buildTypes {\n        release {\n            signingConfig signingConfigs.release`, 1);
     }
@@ -246,4 +245,4 @@ if (fs.existsSync(manifest)) {
   fs.writeFileSync(manifest, text);
 }
 
-console.log('VidGrab Android native bridge, safe-area, storage, Vibe Player and launcher icon patched.');
+console.log('VidGrab Android native bridge, storage, Vibe Player and launcher icon patched.');
