@@ -156,35 +156,13 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V3')) {
         setContentView(root);`;
   browser = browser.replace(navNeedle, nav);
 
+  // native-browser.mjs already owns the browser Activity's navigation-bar
+  // hiding methods. Do not inject a second hideVidGrabSystemNavigation() or
+  // onWindowFocusChanged() here; that caused duplicate Java methods.
   if (!browser.includes('VIDGRAB_BROWSER_SYSTEM_NAV_V1')) {
-    const hide = `
-    // VIDGRAB_BROWSER_SYSTEM_NAV_V1
-    private void hideVidGrabSystemNavigation() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                android.view.WindowInsetsController controller = getWindow().getInsetsController();
-                if (controller != null) {
-                    controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-                    controller.hide(android.view.WindowInsets.Type.navigationBars());
-                }
-            } else {
-                android.view.View decor = getWindow().getDecorView();
-                decor.setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-            }
-        } catch (Exception ignored) {}
-    }
-
-    @Override public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) hideVidGrabSystemNavigation();
-    }
-`;
-    const classEnd = browser.lastIndexOf('\n}');
-    if (classEnd < 0) throw new Error('Browser class boundary not found');
-    browser = browser.slice(0, classEnd) + hide + browser.slice(classEnd);
-    browser = browser.replace('super.onCreate(savedInstanceState);', 'super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();', 1);
+    browser = browser.replace('public class VidGrabBrowserActivity extends Activity {', 'public class VidGrabBrowserActivity extends Activity {\n    // VIDGRAB_BROWSER_SYSTEM_NAV_V1\n');
   }
 }
 
 fs.writeFileSync(browserFile, browser);
-console.log('[native-browser-grab] selected-video-only GRAB flow generated; browser system navigation patch is idempotent');
+console.log('[native-browser-grab] selected-video-only GRAB flow generated; browser navigation hiding delegated to native-browser.mjs');
