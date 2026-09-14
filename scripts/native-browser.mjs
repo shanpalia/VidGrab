@@ -54,6 +54,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -63,7 +64,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-// VIDGRAB_NATIVE_BROWSER_V2
+// VIDGRAB_NATIVE_BROWSER_V3
 public class VidGrabBrowserActivity extends Activity {
     private WebView webView;
     private EditText address;
@@ -113,6 +114,16 @@ public class VidGrabBrowserActivity extends Activity {
         toolbar.setPadding(dp(6), dp(6), dp(6), dp(6));
         toolbar.setBackgroundColor(Color.WHITE);
         toolbar.setElevation(dp(2));
+        toolbar.setTag("VIDGRAB_BROWSER_TOOLBAR_SAFE_AREA_V2");
+        toolbar.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top = insets.getInsets(WindowInsets.Type.statusBars()).top;
+            int left = insets.getInsets(WindowInsets.Type.displayCutout()).left;
+            int right = insets.getInsets(WindowInsets.Type.displayCutout()).right;
+            v.setPadding(Math.max(dp(6), left + dp(6)), top + dp(6), Math.max(dp(6), right + dp(6)), dp(6));
+            v.getLayoutParams().height = dp(58) + top;
+            v.requestLayout();
+            return insets;
+        });
 
         back = new ImageButton(this);
         back.setImageResource(android.R.drawable.ic_media_previous);
@@ -144,6 +155,7 @@ public class VidGrabBrowserActivity extends Activity {
         toolbar.addView(reload, new LinearLayout.LayoutParams(dp(42), dp(46)));
         toolbar.addView(address, addressLp);
         toolbar.addView(go, new LinearLayout.LayoutParams(dp(44), dp(46)));
+        // GRAB is added by native-browser-grab.mjs.
         toolbar.addView(close, new LinearLayout.LayoutParams(dp(42), dp(46)));
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(58)));
 
@@ -164,12 +176,14 @@ public class VidGrabBrowserActivity extends Activity {
             @Override public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 syncToolbar();
+                hideDuplicateSiteNavigation();
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return false; }
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) { return false; }
         });
         root.addView(webView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
+        toolbar.requestApplyInsets();
 
         back.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); else finish(); });
         forward.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
@@ -180,22 +194,10 @@ public class VidGrabBrowserActivity extends Activity {
         webView.loadUrl(initial);
     }
 
-    private void syncToolbar() {
-        runOnUiThread(() -> {
-            if (webView == null) return;
-            back.setEnabled(webView.canGoBack());
-            forward.setEnabled(webView.canGoForward());
-            String u = webView.getUrl();
-            if (u != null && !u.isEmpty()) address.setText(u);
-        });
-    }
-
-    private void loadAddress() {
-        String value = address.getText().toString().trim();
-        if (value.isEmpty()) return;
-        if (value.matches("(?i)^https?://.*")) webView.loadUrl(value);
-        else if (value.matches("^\\\\S+\\\\.\\\\S+.*$")) webView.loadUrl("https://" + value);
-        else webView.loadUrl("https://www.youtube.com/results?search_query=" + Uri.encode(value));
+    private void hideDuplicateSiteNavigation() {
+        String css = "ytm-pivot-bar-renderer,ytm-mobile-topbar-renderer,#player-theater-container,ytm-app>ytm-pivot-bar-renderer{display:none!important}";
+        String script = "(function(){try{var id='vidgrab-hide-site-nav';var s=document.getElementById(id);if(!s){s=document.createElement('style');s.id=id;s.textContent='" + css + "';document.head.appendChild(s);}document.querySelectorAll('ytm-pivot-bar-renderer').forEach(function(e){e.style.display='none'});}catch(e){}})()";
+        try { webView.evaluateJavascript(script, null); } catch (Exception ignored) {}
     }
 
     private void hideVidGrabSystemNavigation() {
@@ -223,6 +225,24 @@ public class VidGrabBrowserActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) hideVidGrabSystemNavigation();
+    }
+
+    private void syncToolbar() {
+        runOnUiThread(() -> {
+            if (webView == null) return;
+            back.setEnabled(webView.canGoBack());
+            forward.setEnabled(webView.canGoForward());
+            String u = webView.getUrl();
+            if (u != null && !u.isEmpty()) address.setText(u);
+        });
+    }
+
+    private void loadAddress() {
+        String value = address.getText().toString().trim();
+        if (value.isEmpty()) return;
+        if (value.matches("(?i)^https?://.*")) webView.loadUrl(value);
+        else if (value.matches("^\\\\S+\\\\.\\\\S+.*$")) webView.loadUrl("https://" + value);
+        else webView.loadUrl("https://www.youtube.com/results?search_query=" + Uri.encode(value));
     }
 
     @Override public void onBackPressed() {
@@ -254,4 +274,4 @@ if (fs.existsSync(manifest)) {
   fs.writeFileSync(manifest, text);
 }
 
-console.log('[native-browser] public Android WebView browser activity generated with immersive navigation hiding');
+console.log('[native-browser] V3 browser generated: status-bar safe toolbar, immersive nav hiding, duplicate site-nav suppression');
