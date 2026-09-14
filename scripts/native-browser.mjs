@@ -55,6 +55,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -94,12 +95,7 @@ public class VidGrabBrowserActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        hideVidGrabSystemNavigation();
-        getWindow().setStatusBarColor(Color.WHITE);
-        getWindow().setNavigationBarColor(Color.TRANSPARENT);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        }
+        configureVidGrabWindow();
 
         String initial = getIntent().getStringExtra("url");
         if (initial == null || initial.trim().isEmpty()) initial = "https://www.youtube.com/";
@@ -114,7 +110,7 @@ public class VidGrabBrowserActivity extends Activity {
         toolbar.setPadding(dp(6), dp(6), dp(6), dp(6));
         toolbar.setBackgroundColor(Color.WHITE);
         toolbar.setElevation(dp(2));
-        toolbar.setTag("VIDGRAB_BROWSER_TOOLBAR_SAFE_AREA_V2");
+        toolbar.setTag("VIDGRAB_BROWSER_TOOLBAR_SAFE_AREA_V3");
         toolbar.setOnApplyWindowInsetsListener((v, insets) -> {
             int top = insets.getInsets(WindowInsets.Type.statusBars()).top;
             int left = insets.getInsets(WindowInsets.Type.displayCutout()).left;
@@ -183,6 +179,7 @@ public class VidGrabBrowserActivity extends Activity {
         });
         root.addView(webView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
+        root.post(this::configureVidGrabWindow);
         toolbar.requestApplyInsets();
 
         back.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); else finish(); });
@@ -194,32 +191,47 @@ public class VidGrabBrowserActivity extends Activity {
         webView.loadUrl(initial);
     }
 
+    private void configureVidGrabWindow() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                getWindow().setDecorFitsSystemWindows(false);
+            }
+            getWindow().setStatusBarColor(Color.WHITE);
+            getWindow().setNavigationBarColor(Color.TRANSPARENT);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) getWindow().setNavigationBarContrastEnforced(false);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            hideVidGrabSystemNavigation();
+        } catch (Exception ignored) {}
+    }
+
     private void hideDuplicateSiteNavigation() {
-        String css = "ytm-pivot-bar-renderer,ytm-mobile-topbar-renderer,#player-theater-container,ytm-app>ytm-pivot-bar-renderer{display:none!important}";
-        String script = "(function(){try{var id='vidgrab-hide-site-nav';var s=document.getElementById(id);if(!s){s=document.createElement('style');s.id=id;s.textContent='" + css + "';document.head.appendChild(s);}document.querySelectorAll('ytm-pivot-bar-renderer').forEach(function(e){e.style.display='none'});}catch(e){}})()";
+        String css = "ytm-pivot-bar-renderer,ytm-pivot-bar-item-renderer{display:none!important}";
+        String script = "(function(){try{var id='vidgrab-hide-site-nav';var s=document.getElementById(id);if(!s){s=document.createElement('style');s.id=id;s.textContent='" + css + "';document.head.appendChild(s);}document.querySelectorAll('ytm-pivot-bar-renderer,ytm-pivot-bar-item-renderer').forEach(function(e){e.style.display='none'});}catch(e){}})()";
         try { webView.evaluateJavascript(script, null); } catch (Exception ignored) {}
     }
 
     private void hideVidGrabSystemNavigation() {
         try {
+            View decor = getWindow().getDecorView();
+            int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            decor.setSystemUiVisibility(flags);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 android.view.WindowInsetsController controller = getWindow().getInsetsController();
                 if (controller != null) {
                     controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
                     controller.hide(android.view.WindowInsets.Type.navigationBars());
                 }
-            } else {
-                getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
             }
         } catch (Exception ignored) {}
     }
 
     @Override public void onResume() {
         super.onResume();
-        hideVidGrabSystemNavigation();
+        configureVidGrabWindow();
     }
 
     @Override public void onWindowFocusChanged(boolean hasFocus) {
@@ -274,4 +286,4 @@ if (fs.existsSync(manifest)) {
   fs.writeFileSync(manifest, text);
 }
 
-console.log('[native-browser] V3 browser generated: status-bar safe toolbar, immersive nav hiding, duplicate site-nav suppression');
+console.log('[native-browser] V4 browser generated: safe toolbar, persistent immersive navigation hiding, and YouTube bottom-nav-only suppression');
