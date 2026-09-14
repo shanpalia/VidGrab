@@ -126,5 +126,19 @@ if(!source.includes('VIDGRAB_MAIN_RESUME_NAV_V1')){
   source=source.slice(0,mainCloseIndex)+resume+source.slice(mainCloseIndex);
 }
 
+if(!source.includes('VIDGRAB_MAIN_FOCUS_NAV_V1')){
+  const focus=`
+    // VIDGRAB_MAIN_FOCUS_NAV_V1
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideVidGrabSystemNavigation();
+    }
+`;
+  const mainClose='\n}\n\nclass VidGrabNative';
+  const mainCloseIndex=source.indexOf(mainClose);
+  if(mainCloseIndex<0)throw new Error('MainActivity class boundary not found for focus callback');
+  source=source.slice(0,mainCloseIndex)+focus+source.slice(mainCloseIndex);
+}
+
 fs.writeFileSync(file,source);
 console.log('[native] VidGrab V9 safe area + browser back + persistent immersive navigation hiding applied to MainActivity');
