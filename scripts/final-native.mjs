@@ -18,7 +18,6 @@ source=source.replace('        if (bridge != null && bridge.getWebView() != null
             getWindow().setNavigationBarColor(Color.TRANSPARENT);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 int flags = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
                 getWindow().getDecorView().setSystemUiVisibility(flags);
             }
             final android.view.View webView=bridge.getWebView();
@@ -80,9 +79,6 @@ if(!source.includes('VIDGRAB_ANDROID_BACK_V2')){
   source=source.replace(anchor,code);
 }
 
-// IMPORTANT: MainActivity.java also contains the package-private VidGrabNative
-// helper class. Do not append Activity methods at the last file brace, because
-// that would put getWindow()/onWindowFocusChanged() inside VidGrabNative.
 if(!source.includes('VIDGRAB_SYSTEM_NAV_HIDDEN_V1')){
   source=source.replace('public class MainActivity extends BridgeActivity {','public class MainActivity extends BridgeActivity {\n    // VIDGRAB_SYSTEM_NAV_HIDDEN_V1');
   const hide=`
@@ -129,5 +125,18 @@ if(!source.includes('void onWindowFocusChanged(boolean hasFocus)')){
   source=source.slice(0,mainCloseIndex)+focus+source.slice(mainCloseIndex);
 }
 
+if(!source.includes('void onResume()')){
+  const resume=`
+    @Override protected void onResume() {
+        super.onResume();
+        hideVidGrabSystemNavigation();
+    }
+`;
+  const mainClose='\n}\n\nclass VidGrabNative';
+  const mainCloseIndex=source.indexOf(mainClose);
+  if(mainCloseIndex<0)throw new Error('MainActivity class boundary not found for resume callback');
+  source=source.slice(0,mainCloseIndex)+resume+source.slice(mainCloseIndex);
+}
+
 fs.writeFileSync(file,source);
-console.log('[native] VidGrab V9 safe area + predictive browser back + hidden Android system navigation applied to MainActivity');
+console.log('[native] VidGrab V9 safe area + browser back + persistent immersive navigation hiding applied to MainActivity');
