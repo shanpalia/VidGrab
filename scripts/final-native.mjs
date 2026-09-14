@@ -112,22 +112,10 @@ if(!source.includes('hideVidGrabSystemNavigation();')){
   source=source.replace('        super.onCreate(savedInstanceState);','        super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();',1);
 }
 
-if(!source.includes('void onWindowFocusChanged(boolean hasFocus)')){
-  const focus=`
-    @Override public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) hideVidGrabSystemNavigation();
-    }
-`;
-  const mainClose='\n}\n\nclass VidGrabNative';
-  const mainCloseIndex=source.indexOf(mainClose);
-  if(mainCloseIndex<0)throw new Error('MainActivity class boundary not found for focus callback');
-  source=source.slice(0,mainCloseIndex)+focus+source.slice(mainCloseIndex);
-}
-
-if(!source.includes('void onResume()')){
+if(!source.includes('VIDGRAB_MAIN_RESUME_NAV_V1')){
   const resume=`
-    @Override protected void onResume() {
+    // VIDGRAB_MAIN_RESUME_NAV_V1
+    @Override public void onResume() {
         super.onResume();
         hideVidGrabSystemNavigation();
     }
