@@ -23,7 +23,6 @@ if (!main.includes('VIDGRAB_NATIVE_GRAB_V2')) {
     else if (c === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
   }
   if (end < 0) throw new Error('notifyBrowserClosed block has invalid braces');
-
   const replacement = `void notifyBrowserClosed() {
         if (browserGrabHandoff) { browserGrabHandoff = false; return; }
         if (bridge != null && bridge.getWebView() != null) {
@@ -119,63 +118,28 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V3')) {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(22), dp(20), dp(22), dp(14));
         box.setBackgroundColor(Color.WHITE);
-
         TextView title = textButton("GRAB THIS VIDEO?");
-        title.setTextSize(19);
-        title.setTextColor(Color.rgb(25,35,50));
-        title.setGravity(Gravity.LEFT);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextSize(19); title.setTextColor(Color.rgb(25,35,50)); title.setGravity(Gravity.LEFT); title.setTypeface(null, android.graphics.Typeface.BOLD);
         box.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
-
         TextView sub = textButton("Video detected • ready to download");
-        sub.setTextSize(13);
-        sub.setTextColor(Color.rgb(100,110,125));
-        sub.setGravity(Gravity.LEFT);
+        sub.setTextSize(13); sub.setTextColor(Color.rgb(100,110,125)); sub.setGravity(Gravity.LEFT);
         box.addView(sub, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)));
-
         TextView urlView = textButton(url == null ? "" : url);
-        urlView.setTextSize(11);
-        urlView.setTextColor(Color.rgb(120,125,135));
-        urlView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-        urlView.setMaxLines(2);
+        urlView.setTextSize(11); urlView.setTextColor(Color.rgb(120,125,135)); urlView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL); urlView.setMaxLines(2);
         box.addView(urlView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        TextView later = textButton("LATER");
-        later.setTextColor(Color.rgb(95,100,110));
-        TextView grabNow = textButton("GRAB");
-        grabNow.setTextColor(Color.rgb(220,25,35));
-        grabNow.setTypeface(null, android.graphics.Typeface.BOLD);
-        actions.addView(later, new LinearLayout.LayoutParams(dp(86), dp(50)));
-        actions.addView(grabNow, new LinearLayout.LayoutParams(dp(86), dp(50)));
+        LinearLayout actions = new LinearLayout(this); actions.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        TextView later = textButton("LATER"); later.setTextColor(Color.rgb(95,100,110));
+        TextView grabNow = textButton("GRAB"); grabNow.setTextColor(Color.rgb(220,25,35)); grabNow.setTypeface(null, android.graphics.Typeface.BOLD);
+        actions.addView(later, new LinearLayout.LayoutParams(dp(86), dp(50))); actions.addView(grabNow, new LinearLayout.LayoutParams(dp(86), dp(50)));
         box.addView(actions, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)));
-
         dialog.setContentView(box);
         android.view.Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-            window.setDimAmount(0.55f);
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            window.setGravity(Gravity.BOTTOM);
-        }
+        if (window != null) { window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.WHITE)); window.setDimAmount(0.55f); window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND); window.setGravity(Gravity.BOTTOM); }
         later.setOnClickListener(v -> dialog.dismiss());
-        grabNow.setOnClickListener(v -> {
-            dialog.dismiss();
-            MainActivity main = MainActivity.getCurrentInstance();
-            if (main != null) {
-                main.notifyBrowserGrab(webView == null ? "" : webView.getUrl());
-                finish();
-            }
-        });
+        grabNow.setOnClickListener(v -> { dialog.dismiss(); MainActivity main = MainActivity.getCurrentInstance(); if (main != null) { main.notifyBrowserGrab(webView == null ? "" : webView.getUrl()); finish(); } });
         dialog.setOnDismissListener(d -> grabDialog = null);
         dialog.show();
-        if (window != null) {
-            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.WHITE));
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            window.setGravity(Gravity.BOTTOM);
-        }
+        if (window != null) { window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); window.setGravity(Gravity.BOTTOM); }
     }
 `;
   browser = browser.replace('    private void syncToolbar() {', hook + '\n    private void syncToolbar() {');
@@ -183,35 +147,18 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V3')) {
   const navNeedle = '        root.addView(webView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));\n        setContentView(root);';
   if (!browser.includes(navNeedle)) throw new Error('Browser WebView insertion point not found');
   const nav = `        root.addView(webView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-
         // VIDGRAB_NATIVE_BOTTOM_NAV_V2
-        LinearLayout bottomNav = new LinearLayout(this);
-        bottomNav.setGravity(Gravity.CENTER);
-        bottomNav.setPadding(dp(4), dp(3), dp(4), dp(3));
-        bottomNav.setBackgroundColor(Color.WHITE);
-        bottomNav.setElevation(dp(6));
+        LinearLayout bottomNav = new LinearLayout(this); bottomNav.setGravity(Gravity.CENTER); bottomNav.setPadding(dp(4), dp(3), dp(4), dp(3)); bottomNav.setBackgroundColor(Color.WHITE); bottomNav.setElevation(dp(6));
         String[] tabs = {"⌂\\nHome", "♫\\nMusic", "▣\\nVideo", "⇩\\nMy Files", "♙\\nMe"};
         String[] ids = {"home", "music", "video", "files", "me"};
-        for (int i = 0; i < tabs.length; i++) {
-            final String tab = ids[i];
-            TextView item = textButton(tabs[i]);
-            item.setTextSize(11);
-            item.setTextColor(i == 0 ? Color.rgb(220,25,35) : Color.rgb(90,100,115));
-            item.setGravity(Gravity.CENTER);
-            item.setOnClickListener(v -> {
-                MainActivity main = MainActivity.getCurrentInstance();
-                if (main != null) main.notifyBrowserNavigate(tab);
-                finish();
-            });
-            bottomNav.addView(item, new LinearLayout.LayoutParams(0, dp(60), 1f));
-        }
-        LinearLayout.LayoutParams navLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(68));
-        navLp.setMargins(dp(8), 0, dp(8), dp(10));
-        root.addView(bottomNav, navLp);
+        for (int i = 0; i < tabs.length; i++) { final String tab = ids[i]; TextView item = textButton(tabs[i]); item.setTextSize(11); item.setTextColor(i == 0 ? Color.rgb(220,25,35) : Color.rgb(90,100,115)); item.setGravity(Gravity.CENTER); item.setOnClickListener(v -> { MainActivity main = MainActivity.getCurrentInstance(); if (main != null) main.notifyBrowserNavigate(tab); finish(); }); bottomNav.addView(item, new LinearLayout.LayoutParams(0, dp(60), 1f)); }
+        LinearLayout.LayoutParams navLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(68)); navLp.setMargins(dp(8), 0, dp(8), dp(10)); root.addView(bottomNav, navLp);
         setContentView(root);`;
   browser = browser.replace(navNeedle, nav);
 
-  const hide = `
+  if (!browser.includes('VIDGRAB_BROWSER_SYSTEM_NAV_V1')) {
+    const hide = `
+    // VIDGRAB_BROWSER_SYSTEM_NAV_V1
     private void hideVidGrabSystemNavigation() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -226,16 +173,18 @@ if (!browser.includes('VIDGRAB_NATIVE_GRAB_V3')) {
             }
         } catch (Exception ignored) {}
     }
-`;
-  browser = browser.slice(0, browser.lastIndexOf('\n}')) + hide + `
+
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) hideVidGrabSystemNavigation();
     }
-` + '\n}\n';
-  browser = browser.replace('super.onCreate(savedInstanceState);', 'super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();', 1);
-
-  fs.writeFileSync(browserFile, browser);
+`;
+    const classEnd = browser.lastIndexOf('\n}');
+    if (classEnd < 0) throw new Error('Browser class boundary not found');
+    browser = browser.slice(0, classEnd) + hide + browser.slice(classEnd);
+    browser = browser.replace('super.onCreate(savedInstanceState);', 'super.onCreate(savedInstanceState);\n        hideVidGrabSystemNavigation();', 1);
+  }
 }
 
-console.log('[native-browser-grab] selected-video-only GRAB flow generated; search-result previews no longer trigger download popup');
+fs.writeFileSync(browserFile, browser);
+console.log('[native-browser-grab] selected-video-only GRAB flow generated; browser system navigation patch is idempotent');
