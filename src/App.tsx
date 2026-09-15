@@ -86,9 +86,6 @@ export default function App() {
       if (!url) return;
       setNativeBrowserOpen(false);
       setErrorMessage(undefined);
-      // The native browser already displayed the single VidMate-style GRAB
-      // confirmation sheet. After the user presses GRAB, go directly to the
-      // metadata/download-options step instead of showing a second popup.
       void handleGrab(url);
     };
     window.addEventListener('vidgrab-native-grab', onNativeGrab);
@@ -165,7 +162,7 @@ export default function App() {
       {activePlaybackFile && isPlayerMaximized && activePlaybackFile.type === 'video' && <VidGrabVideoPlayer file={activePlaybackFile} onClose={() => setActivePlaybackFile(null)} onMinimize={() => setIsPlayerMaximized(false)} onFileUpdated={refreshStorage} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActivePlaybackFile(null); }} />}
       {activePlaybackFile && isPlayerMaximized && activePlaybackFile.type === 'audio' && <VidGrabAudioPlayer file={activePlaybackFile} onClose={() => setActivePlaybackFile(null)} onMinimize={() => setIsPlayerMaximized(false)} onFileUpdated={refreshStorage} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActivePlaybackFile(null); }} />}
       {activeImageViewerFile && <VidGrabImageViewer file={activeImageViewerFile} onClose={() => setActiveImageViewerFile(null)} onDeleteFile={(id) => { const target = StorageService.getFiles().find((f) => f.id === id); if (target?.nativeFileUri) NativeStorage.delete(target.nativeFileUri); StorageService.deleteFile(id); void MediaStorage.deleteBlob(id); refreshStorage(); setActiveImageViewerFile(null); }} />}
-      {!isBrowser && <BottomNav activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />}
+      <BottomNav activeTab={activeTab} onNavigate={navigate} filesCount={files.length} />
       {clipboardUrl && (
         <div className="fixed inset-0 z-[200] bg-black/55 flex items-center justify-center p-5">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden">
