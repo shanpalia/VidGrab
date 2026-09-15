@@ -10,7 +10,7 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onNavigate, filesCount }) => {
   return (
-    <div className="fixed bottom-2 left-2 right-2 z-50 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-1 py-1.5 safe-area-bottom shadow-xl shadow-gray-900/10">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+8px)] left-2 right-2 z-50 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-1 py-1.5 safe-area-bottom shadow-xl shadow-gray-900/10">
       <nav className="flex items-center justify-around max-w-lg mx-auto">
         <button id="nav-tab-home" type="button" onClick={() => onNavigate('home')} className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${activeTab === 'home' || activeTab === 'result' ? 'text-red-600 font-bold' : 'text-gray-500 hover:text-gray-900'}`}>
           <div className={`p-1 rounded-lg ${activeTab === 'home' || activeTab === 'result' ? 'bg-red-50 text-red-600' : ''}`}><Home className="w-5 h-5 stroke-[2.2]" /></div>
